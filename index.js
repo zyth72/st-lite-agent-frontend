@@ -48,7 +48,7 @@ function css() {
     '#lite-agent-ball { position: fixed; width: 46px; height: 46px; border-radius: 50%; background: rgba(13,20,30,0.85); border: 2px solid rgba(0,240,255,0.55); color: #00f0ff; font-size: 20px; line-height: 42px; text-align: center; cursor: pointer; z-index: 99999; user-select: none; box-shadow: 0 0 12px rgba(0,240,255,0.25); }',
     '#lite-agent-panel { position: fixed; width: 520px; max-width: 94vw; height: 66vh; background: rgba(13,17,24,0.96); border: 1px solid rgba(0,240,255,0.35); border-radius: 10px; color: #c8d6e5; z-index: 99998; display: none; flex-direction: column; font-family: system-ui, sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }',
     '#lite-agent-panel.open { display: flex; }',
-    '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; cursor: move; }',
+    '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; cursor: move; touch-action: none; user-select: none; }',
     '#lite-agent-head input[type=text] { background: #101722; color: #c8d6e5; border: 1px solid rgba(0,240,255,0.3); border-radius: 4px; padding: 3px 6px; font-size: 12px; }',
     '#lite-agent-body { flex: 1; overflow-y: auto; padding: 8px 10px; }',
     '.la-group { margin-bottom: 12px; }',
@@ -57,6 +57,7 @@ function css() {
     '.la-card-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: #9bb8d0; font-size: 12px; }',
     '.la-copy { margin-left: auto; background: #16222f; color: #6fa8d8; border: 1px solid rgba(90,160,220,0.4); border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }',
     '.la-pre { margin: 0; padding: 6px 8px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 32vh; overflow-y: auto; color: #b8ccdd; }',
+    '.la-pre blockquote { margin: 0; padding: 2px 0 2px 10px; border-left: 3px solid rgba(0,240,255,0.32); color: #a8cfe0; }',
     'details.la-reason { margin-bottom: 8px; }',
     'details.la-reason > summary { background: rgba(20,30,45,0.92); border: 1px solid rgba(90,160,220,0.35); border-radius: 8px; padding: 5px 10px; cursor: pointer; color: #9bb8d0; font-size: 12px; font-weight: bold; list-style: none; display: flex; align-items: center; gap: 6px; }',
     'details.la-reason > summary::before { content: \'▸\'; color: #5f7488; }',
@@ -76,34 +77,36 @@ function css() {
   document.head.appendChild(s);
 }
 
-function makeDraggable(el, pos, onSave) {
-  el.addEventListener('pointerdown', (e) => {
+function makeDraggable(handle, target, pos, onSave) {
+  handle.addEventListener('pointerdown', (e) => {
     if (e.target.closest('input, select, button, label, summary, .la-copy')) return;
+    e.preventDefault();
     const startX = e.clientX, startY = e.clientY;
     const startRight = pos.right, startBottom = pos.bottom;
     let dragged = false;
+    try { handle.setPointerCapture(e.pointerId); } catch (err) {}
     const move = (ev) => {
       const dx = ev.clientX - startX, dy = ev.clientY - startY;
-      if (Math.abs(dx) + Math.abs(dy) > 8) dragged = true;
+      if (Math.abs(dx) + Math.abs(dy) > 3) dragged = true;
       if (dragged) {
         pos.right = Math.max(4, startRight - dx);
         pos.bottom = Math.max(4, startBottom - dy);
-        el.style.right = pos.right + 'px';
-        el.style.bottom = pos.bottom + 'px';
-        el.style.left = 'auto';
-        el.style.top = 'auto';
+        target.style.right = pos.right + 'px';
+        target.style.bottom = pos.bottom + 'px';
+        target.style.left = 'auto';
+        target.style.top = 'auto';
       }
     };
     const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
       if (dragged) onSave(pos);
-      return dragged;
     };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
   });
-  return { wasDragged: () => false };
 }
 
 function buildBall() {
@@ -162,7 +165,7 @@ function buildPanel() {
   const panel = h('div', { id: 'lite-agent-panel' }, [head, bodyEl]);
   panel.style.right = panelPos.right + 'px';
   panel.style.bottom = panelPos.bottom + 'px';
-  makeDraggable(panel, panelPos, (p) => localStorage.setItem(LS_PANEL, JSON.stringify(p)));
+  makeDraggable(head, panel, panelPos, (p) => localStorage.setItem(LS_PANEL, JSON.stringify(p)));
   document.body.appendChild(panel);
 }
 
@@ -206,7 +209,6 @@ function renderGroups(stages) {
       det, outDet,
     ]));
   });
-  bodyEl.scrollTop = bodyEl.scrollHeight;
 }
 
 function appendText(stage, kind, text) {
@@ -216,8 +218,6 @@ function appendText(stage, kind, text) {
   if (el) {
     el._raw = (el._raw || '') + text;
     el.innerHTML = mdRender(el._raw);
-    el.scrollTop = el.scrollHeight;
-    if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
   }
 }
 
