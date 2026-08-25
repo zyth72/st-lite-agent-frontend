@@ -2,7 +2,10 @@
  * st-lite-agent 前端插件:悬浮球 + 悬浮窗,实时查看 agent 各步日志(思维链/正文/结算/提示词)
  * 数据来源:proxy 的 /agent/requests 与 /agent/steps 接口(offset 增量轮询 = 流式)。
  */
-import { eventSource, event_types } from '../../../../script.js';
+// 酒馆会把扩展装到两个位置:data/default-user/extensions/(4 层)或 public/scripts/extensions/third-party/(5 层)
+const IS_THIRD_PARTY = typeof location !== 'undefined' && location.pathname.includes('/extensions/third-party/');
+const CORE_PATH = IS_THIRD_PARTY ? '../../../../../' : '../../../../';
+const { eventSource, event_types } = await import(CORE_PATH + 'script.js');
 
 const MODULE = 'st-lite-agent';
 const LS_BASE = 'st-lite-agent-base';
