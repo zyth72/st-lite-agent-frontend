@@ -37,15 +37,24 @@ function loadPos(key, def) {
   return def;
 }
 
-let ballPos = loadPos(LS_BALL, { right: 18, bottom: 18 });
-let panelPos = loadPos(LS_PANEL, { right: 18, bottom: 76 });
+function clampPos(p, w, h) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const maxRight = Math.max(0, vw - w - 8);
+  const maxBottom = Math.max(0, vh - h - 8);
+  if (typeof p.right === 'number') p.right = Math.min(Math.max(0, p.right), maxRight);
+  if (typeof p.bottom === 'number') p.bottom = Math.min(Math.max(0, p.bottom), maxBottom);
+  return p;
+}
+
+let ballPos = clampPos(loadPos(LS_BALL, { right: 18, bottom: 18 }), 54, 54);
+let panelPos = clampPos(loadPos(LS_PANEL, { right: 18, bottom: 76 }), 520, Math.round(window.innerHeight * 0.66));
 
 function css() {
   if (document.getElementById('lite-agent-style')) return;
   const s = document.createElement('style');
   s.id = 'lite-agent-style';
   s.textContent = [
-    '#lite-agent-ball { position: fixed; width: 46px; height: 46px; border-radius: 50%; background: rgba(13,20,30,0.85); border: 2px solid rgba(0,240,255,0.55); color: #00f0ff; font-size: 20px; line-height: 42px; text-align: center; cursor: pointer; z-index: 99999; user-select: none; box-shadow: 0 0 12px rgba(0,240,255,0.25); }',
+    '#lite-agent-ball { position: fixed; width: 46px; height: 46px; border-radius: 50%; background: rgba(13,20,30,0.85); border: 2px solid rgba(0,240,255,0.55); color: #00f0ff; font-size: 20px; line-height: 42px; text-align: center; cursor: pointer; z-index: 99999; user-select: none; touch-action: none; box-shadow: 0 0 12px rgba(0,240,255,0.25); }',
     '#lite-agent-panel { position: fixed; width: 520px; max-width: 94vw; height: 66vh; background: rgba(13,17,24,0.96); border: 1px solid rgba(0,240,255,0.35); border-radius: 10px; color: #c8d6e5; z-index: 99998; display: none; flex-direction: column; font-family: system-ui, sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }',
     '#lite-agent-panel.open { display: flex; }',
     '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; cursor: move; touch-action: none; user-select: none; }',
@@ -73,6 +82,18 @@ function css() {
     '#lite-agent-status { width: 8px; height: 8px; border-radius: 50%; background: #555; display: inline-block; }',
     '#lite-agent-status.ok { background: #2ecc71; }',
     '#lite-agent-status.err { background: #e74c3c; }',
+    '@media (max-width: 768px) {',
+    '  #lite-agent-ball { width: 54px; height: 54px; font-size: 24px; line-height: 50px; }',
+    '  #lite-agent-panel { width: 100vw; max-width: 100vw; height: 82vh; border-radius: 12px 12px 0 0; }',
+    '  #lite-agent-head { padding: 10px 12px; gap: 8px; }',
+    '  #lite-agent-head input[type=text] { font-size: 14px; padding: 6px 8px; width: 120px; }',
+    '  #lite-agent-head button { font-size: 13px; padding: 6px 10px; }',
+    '  #lite-agent-body { padding: 10px 12px; }',
+    '  .la-pre { font-size: 13px; line-height: 1.6; }',
+    '  .la-card-head { font-size: 13px; }',
+    '  details.la-reason > summary, details.la-out > summary { padding: 8px 12px; font-size: 13px; }',
+    '  .la-copy { font-size: 12px; padding: 4px 12px; }',
+    '}',
   ].join('\n');
   document.head.appendChild(s);
 }
@@ -89,8 +110,10 @@ function makeDraggable(handle, target, pos, onSave) {
       const dx = ev.clientX - startX, dy = ev.clientY - startY;
       if (Math.abs(dx) + Math.abs(dy) > 3) dragged = true;
       if (dragged) {
-        pos.right = Math.max(4, startRight - dx);
-        pos.bottom = Math.max(4, startBottom - dy);
+        const maxRight = Math.max(0, window.innerWidth - target.offsetWidth - 8);
+        const maxBottom = Math.max(0, window.innerHeight - target.offsetHeight - 8);
+        pos.right = Math.min(Math.max(0, startRight - dx), maxRight);
+        pos.bottom = Math.min(Math.max(0, startBottom - dy), maxBottom);
         target.style.right = pos.right + 'px';
         target.style.bottom = pos.bottom + 'px';
         target.style.left = 'auto';
@@ -126,8 +149,10 @@ function buildBall() {
     const dx = e.clientX - sx, dy = e.clientY - sy;
     if (Math.abs(dx) + Math.abs(dy) > 8) moved = true;
     if (moved) {
-      ballPos.right = Math.max(4, sr - dx);
-      ballPos.bottom = Math.max(4, sb - dy);
+      const maxRight = Math.max(0, window.innerWidth - ball.offsetWidth - 8);
+      const maxBottom = Math.max(0, window.innerHeight - ball.offsetHeight - 8);
+      ballPos.right = Math.min(Math.max(0, sr - dx), maxRight);
+      ballPos.bottom = Math.min(Math.max(0, sb - dy), maxBottom);
       ball.style.right = ballPos.right + 'px';
       ball.style.bottom = ballPos.bottom + 'px';
       ball.style.left = 'auto';
@@ -162,6 +187,7 @@ function buildPanel() {
     h('span', { text: '⚡ st-lite-agent', style: 'color:#00f0ff;font-weight:bold' }),
     status, baseInput, clearBtn,
   ]);
+  if (window.innerWidth <= 768) { panelPos.right = 0; panelPos.bottom = 0; }
   const panel = h('div', { id: 'lite-agent-panel' }, [head, bodyEl]);
   panel.style.right = panelPos.right + 'px';
   panel.style.bottom = panelPos.bottom + 'px';
@@ -273,5 +299,20 @@ jQuery(async () => {
   buildPanel();
   connect();
   console.log('[' + MODULE + '] SSE 面板已就绪,接口基址 ' + base);
+
+  window.addEventListener('resize', () => {
+    const ball = document.getElementById('lite-agent-ball');
+    const panel = document.getElementById('lite-agent-panel');
+    if (ball) {
+      clampPos(ballPos, ball.offsetWidth, ball.offsetHeight);
+      ball.style.right = ballPos.right + 'px';
+      ball.style.bottom = ballPos.bottom + 'px';
+    }
+    if (panel) {
+      clampPos(panelPos, panel.offsetWidth, panel.offsetHeight);
+      panel.style.right = panelPos.right + 'px';
+      panel.style.bottom = panelPos.bottom + 'px';
+    }
+  });
 });
 
