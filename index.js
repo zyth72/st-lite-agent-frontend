@@ -1,6 +1,6 @@
 /**
- * st-lite-agent 前端插件:悬浮球 + 悬浮窗(SSE 流式)
- * 服务端 /agent/stream 推送:reset(新请求,整体清空)+ text(各 llm 步骤的思维链/正文增量)
+ * st-lite-agent 前端插件:悬浮球 + 可拖动悬浮窗(SSE 流式)
+ * 位置记住在 localStorage;悬浮球点击开合、拖动需超过阈值才移动。
  */
 const IS_THIRD_PARTY = typeof location !== 'undefined' && location.pathname.includes('/extensions/third-party/');
 const CORE_PATH = IS_THIRD_PARTY ? '../../../../../' : '../../../../';
@@ -8,6 +8,8 @@ const { eventSource, event_types } = await import(CORE_PATH + 'script.js');
 
 const MODULE = 'st-lite-agent';
 const LS_BASE = 'st-lite-agent-base';
+const LS_BALL = 'st-lite-agent-ball-pos';
+const LS_PANEL = 'st-lite-agent-panel-pos';
 
 let base = localStorage.getItem(LS_BASE) || 'http://127.0.0.1:7890';
 let panelOpen = false;
@@ -28,15 +30,23 @@ function h(tag, attrs, children) {
   return node;
 }
 
+function loadPos(key, def) {
+  try { const p = JSON.parse(localStorage.getItem(key)); if (p && typeof p.right === 'number') return p; } catch (e) {}
+  return def;
+}
+
+let ballPos = loadPos(LS_BALL, { right: 18, bottom: 18 });
+let panelPos = loadPos(LS_PANEL, { right: 18, bottom: 76 });
+
 function css() {
   if (document.getElementById('lite-agent-style')) return;
   const s = document.createElement('style');
   s.id = 'lite-agent-style';
   s.textContent = [
-    '#lite-agent-ball { position: fixed; right: 18px; bottom: 18px; width: 46px; height: 46px; border-radius: 50%; background: rgba(13,20,30,0.85); border: 2px solid rgba(0,240,255,0.55); color: #00f0ff; font-size: 20px; line-height: 42px; text-align: center; cursor: pointer; z-index: 99999; user-select: none; box-shadow: 0 0 12px rgba(0,240,255,0.25); }',
-    '#lite-agent-panel { position: fixed; right: 18px; bottom: 76px; width: 520px; max-width: 94vw; height: 66vh; background: rgba(13,17,24,0.96); border: 1px solid rgba(0,240,255,0.35); border-radius: 10px; color: #c8d6e5; z-index: 99998; display: none; flex-direction: column; font-family: system-ui, sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }',
+    '#lite-agent-ball { position: fixed; width: 46px; height: 46px; border-radius: 50%; background: rgba(13,20,30,0.85); border: 2px solid rgba(0,240,255,0.55); color: #00f0ff; font-size: 20px; line-height: 42px; text-align: center; cursor: pointer; z-index: 99999; user-select: none; box-shadow: 0 0 12px rgba(0,240,255,0.25); }',
+    '#lite-agent-panel { position: fixed; width: 520px; max-width: 94vw; height: 66vh; background: rgba(13,17,24,0.96); border: 1px solid rgba(0,240,255,0.35); border-radius: 10px; color: #c8d6e5; z-index: 99998; display: none; flex-direction: column; font-family: system-ui, sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }',
     '#lite-agent-panel.open { display: flex; }',
-    '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }',
+    '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; cursor: move; }',
     '#lite-agent-head input[type=text] { background: #101722; color: #c8d6e5; border: 1px solid rgba(0,240,255,0.3); border-radius: 4px; padding: 3px 6px; font-size: 12px; }',
     '#lite-agent-body { flex: 1; overflow-y: auto; padding: 8px 10px; }',
     '.la-group { margin-bottom: 12px; }',
@@ -58,29 +68,70 @@ function css() {
   document.head.appendChild(s);
 }
 
+function makeDraggable(el, pos, onSave) {
+  el.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('input, select, button, label, summary, .la-copy')) return;
+    const startX = e.clientX, startY = e.clientY;
+    const startRight = pos.right, startBottom = pos.bottom;
+    let dragged = false;
+    const move = (ev) => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if (Math.abs(dx) + Math.abs(dy) > 8) dragged = true;
+      if (dragged) {
+        pos.right = Math.max(4, startRight - dx);
+        pos.bottom = Math.max(4, startBottom - dy);
+        el.style.right = pos.right + 'px';
+        el.style.bottom = pos.bottom + 'px';
+        el.style.left = 'auto';
+        el.style.top = 'auto';
+      }
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      if (dragged) onSave(pos);
+      return dragged;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  });
+  return { wasDragged: () => false };
+}
+
 function buildBall() {
   if (document.getElementById('lite-agent-ball')) return;
   const ball = h('div', { id: 'lite-agent-ball', title: 'st-lite-agent 面板', text: '⚡' });
-  let sx = 0, sy = 0, ox = 0, oy = 0, moved = 0, suppress = false;
-  ball.addEventListener('mousedown', (e) => {
-    sx = e.clientX; sy = e.clientY; moved = 0; suppress = false;
-    const r = ball.getBoundingClientRect();
-    ox = r.left; oy = r.top;
+  ball.style.right = ballPos.right + 'px';
+  ball.style.bottom = ballPos.bottom + 'px';
+  let down = false, moved = false, sx = 0, sy = 0, sr = 0, sb = 0;
+  ball.addEventListener('pointerdown', (e) => {
+    down = true; moved = false;
+    sx = e.clientX; sy = e.clientY;
+    sr = ballPos.right; sb = ballPos.bottom;
     e.preventDefault();
   });
-  document.addEventListener('mousemove', (e) => {
-    if (e.buttons !== 1) return;
+  window.addEventListener('pointermove', (e) => {
+    if (!down) return;
     const dx = e.clientX - sx, dy = e.clientY - sy;
-    moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
-    if (moved > 6) {
-      suppress = true;
-      ball.style.right = 'auto'; ball.style.bottom = 'auto';
-      ball.style.left = (ox + dx) + 'px'; ball.style.top = (oy + dy) + 'px';
+    if (Math.abs(dx) + Math.abs(dy) > 8) moved = true;
+    if (moved) {
+      ballPos.right = Math.max(4, sr - dx);
+      ballPos.bottom = Math.max(4, sb - dy);
+      ball.style.right = ballPos.right + 'px';
+      ball.style.bottom = ballPos.bottom + 'px';
+      ball.style.left = 'auto';
+      ball.style.top = 'auto';
+    }
+  });
+  window.addEventListener('pointerup', () => {
+    if (down) {
+      down = false;
+      if (moved) localStorage.setItem(LS_BALL, JSON.stringify(ballPos));
     }
   });
   ball.addEventListener('click', () => {
-    if (suppress) { suppress = false; return; }
-    togglePanel();
+    if (!moved) togglePanel();
+    moved = false;
   });
   document.body.appendChild(ball);
 }
@@ -101,6 +152,9 @@ function buildPanel() {
     status, baseInput, clearBtn,
   ]);
   const panel = h('div', { id: 'lite-agent-panel' }, [head, bodyEl]);
+  panel.style.right = panelPos.right + 'px';
+  panel.style.bottom = panelPos.bottom + 'px';
+  makeDraggable(panel, panelPos, (p) => localStorage.setItem(LS_PANEL, JSON.stringify(p)));
   document.body.appendChild(panel);
 }
 
@@ -173,9 +227,7 @@ function connect() {
   });
 }
 
-function reconnect() {
-  connect();
-}
+function reconnect() { connect(); }
 
 jQuery(async () => {
   if (document.getElementById('lite-agent-ball')) return;
