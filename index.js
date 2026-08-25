@@ -2,6 +2,8 @@
  * st-lite-agent 前端插件:悬浮球 + 可拖动悬浮窗(SSE 流式)
  * 位置记住在 localStorage;悬浮球点击开合、拖动需超过阈值才移动。
  */
+import { marked } from './marked.esm.js';
+
 const IS_THIRD_PARTY = typeof location !== 'undefined' && location.pathname.includes('/extensions/third-party/');
 const CORE_PATH = IS_THIRD_PARTY ? '../../../../../' : '../../../../';
 const { eventSource, event_types } = await import(CORE_PATH + 'script.js');
@@ -170,15 +172,9 @@ function togglePanel() {
   if (panel) panel.classList.toggle('open', panelOpen);
 }
 
+marked.use({ gfm: true, breaks: true });
 function mdRender(text) {
-  const esc = String(text || '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return esc
-    .replace(/^###\s+(.*)$/gm, '<div class="md-h">$1</div>')
-    .replace(/^##\s+(.*)$/gm, '<div class="md-h2">$1</div>')
-    .replace(/^#\s+(.*)$/gm, '<div class="md-h1">$1</div>')
-    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
-    .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>');
+  return marked.parse(text || '', { gfm: true, breaks: true });
 }
 
 function renderGroups(stages) {
