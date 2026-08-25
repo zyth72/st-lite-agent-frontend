@@ -249,8 +249,8 @@ function renderGroups(stages) {
       h('div', { class: 'la-card-head' }, [h('span', { text: '正文' }), copyBtn]),
       outPre,
     ]));
-    bodyEl.appendChild(h('div', { class: 'la-group' }, [
-      h('div', { class: 'la-group-label', text: st.id }),
+    bodyEl.appendChild(h('div', { class: 'la-group', id: 'la-group-' + st.id }, [
+      h('div', { class: 'la-group-label', id: 'la-label-' + st.id, text: st.id }),
       det, outDet,
     ]));
   });
@@ -263,6 +263,21 @@ function appendText(stage, kind, text) {
   if (el) {
     el._raw = (el._raw || '') + text;
     scheduleRender(el);
+  }
+}
+
+function setStageStatus(stageId, status) {
+  const label = document.getElementById('la-label-' + stageId);
+  if (!label) return;
+  const map = {
+    running: { icon: '⏳', color: '#00f0ff' },
+    done: { icon: '✅', color: '#2ecc71' },
+    failed: { icon: '❌', color: '#e74c3c' },
+  };
+  const st = map[status];
+  if (st) {
+    label.textContent = st.icon + ' ' + stageId;
+    label.style.color = st.color;
   }
 }
 
@@ -286,6 +301,12 @@ function connect() {
     try {
       const data = JSON.parse(ev.data);
       appendText(data.stage, data.kind, data.text);
+    } catch (e) {}
+  });
+  es.addEventListener('stage', (ev) => {
+    try {
+      const data = JSON.parse(ev.data);
+      setStageStatus(data.stageId, data.status);
     } catch (e) {}
   });
 }
