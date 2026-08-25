@@ -180,6 +180,25 @@ function mdRender(text) {
   return marked.parse(text || '', { gfm: true, breaks: true });
 }
 
+// 流式时按帧合并渲染:每个 chunk 只累加文本,下一帧统一重解析 markdown,
+// 避免上千个小块每次都全量 marked.parse + innerHTML 导致页面卡顿。
+const renderQueue = new Set();
+let renderScheduled = false;
+function flushRenderQueue() {
+  renderScheduled = false;
+  for (const el of renderQueue) {
+    renderQueue.delete(el);
+    el.innerHTML = mdRender(el._raw || '');
+  }
+}
+function scheduleRender(el) {
+  renderQueue.add(el);
+  if (!renderScheduled) {
+    renderScheduled = true;
+    requestAnimationFrame(flushRenderQueue);
+  }
+}
+
 function renderGroups(stages) {
   if (!bodyEl) return;
   bodyEl.innerHTML = '';
@@ -217,7 +236,7 @@ function appendText(stage, kind, text) {
   const el = document.getElementById(id);
   if (el) {
     el._raw = (el._raw || '') + text;
-    el.innerHTML = mdRender(el._raw);
+    scheduleRender(el);
   }
 }
 
