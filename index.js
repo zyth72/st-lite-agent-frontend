@@ -61,6 +61,12 @@ function css() {
     'details.la-reason[open] > summary::before { content: \'▾\'; }',
     'details.la-reason > .la-reason-body { background: rgba(10,16,24,0.9); border: 1px solid rgba(90,160,220,0.25); border-radius: 8px; padding: 8px 10px; margin-top: 6px; }',
     '.la-dim { color: #5f7488; font-size: 12px; padding: 10px; }',
+    'details.la-out { margin-bottom: 0; }',
+    'details.la-out > summary { background: rgba(20,30,45,0.92); border: 1px solid rgba(90,160,220,0.35); border-radius: 8px; padding: 5px 10px; cursor: pointer; color: #9bb8d0; font-size: 12px; font-weight: bold; list-style: none; display: flex; align-items: center; gap: 6px; }',
+    'details.la-out > summary::before { content: \'▸\'; color: #5f7488; }',
+    'details.la-out[open] > summary::before { content: \'▾\'; }',
+    '.md-h1, .md-h2, .md-h { color: #7fd4ff; font-weight: bold; margin: 6px 0 2px; }',
+    '.md-code { color: #9fe8c0; background: rgba(255,255,255,0.05); padding: 0 4px; border-radius: 3px; }',
     '#lite-agent-status { width: 8px; height: 8px; border-radius: 50%; background: #555; display: inline-block; }',
     '#lite-agent-status.ok { background: #2ecc71; }',
     '#lite-agent-status.err { background: #e74c3c; }',
@@ -164,6 +170,17 @@ function togglePanel() {
   if (panel) panel.classList.toggle('open', panelOpen);
 }
 
+function mdRender(text) {
+  const esc = String(text || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return esc
+    .replace(/^###\s+(.*)$/gm, '<div class="md-h">$1</div>')
+    .replace(/^##\s+(.*)$/gm, '<div class="md-h2">$1</div>')
+    .replace(/^#\s+(.*)$/gm, '<div class="md-h1">$1</div>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>');
+}
+
 function renderGroups(stages) {
   if (!bodyEl) return;
   bodyEl.innerHTML = '';
@@ -173,20 +190,24 @@ function renderGroups(stages) {
   }
   stages.forEach((st) => {
     const reasonPre = h('pre', { class: 'la-pre', id: 'la-reason-' + st.id });
+    reasonPre._raw = '';
     const det = h('details', { class: 'la-reason' });
     det.appendChild(h('summary', { text: '🧠 思维链 - ' + st.id }));
     det.appendChild(h('div', { class: 'la-reason-body' }, [reasonPre]));
     const outPre = h('pre', { class: 'la-pre', id: 'la-out-' + st.id });
+    outPre._raw = '';
     const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
-      if (outPre) navigator.clipboard && navigator.clipboard.writeText(outPre.textContent);
+      if (outPre) navigator.clipboard && navigator.clipboard.writeText(outPre._raw || '');
     } });
-    const outCard = h('div', { class: 'la-card' }, [
-      h('div', { class: 'la-card-head' }, [h('span', { text: '🖥️ 正文 - ' + st.id }), copyBtn]),
+    const outDet = h('details', { class: 'la-out', open: 'open' });
+    outDet.appendChild(h('summary', { text: '🖥️ 正文 - ' + st.id }));
+    outDet.appendChild(h('div', { class: 'la-card' }, [
+      h('div', { class: 'la-card-head' }, [h('span', { text: '正文' }), copyBtn]),
       outPre,
-    ]);
+    ]));
     bodyEl.appendChild(h('div', { class: 'la-group' }, [
       h('div', { class: 'la-group-label', text: st.id }),
-      det, outCard,
+      det, outDet,
     ]));
   });
   bodyEl.scrollTop = bodyEl.scrollHeight;
@@ -197,7 +218,8 @@ function appendText(stage, kind, text) {
   const id = (kind === 'reasoning' ? 'la-reason-' : 'la-out-') + stage;
   const el = document.getElementById(id);
   if (el) {
-    el.textContent += text;
+    el._raw = (el._raw || '') + text;
+    el.innerHTML = mdRender(el._raw);
     el.scrollTop = el.scrollHeight;
     if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
   }
