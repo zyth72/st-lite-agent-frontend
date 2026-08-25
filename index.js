@@ -1,7 +1,6 @@
 /**
- * st-lite-agent 前端插件:悬浮球 + 悬浮窗
- * 逻辑:酒馆发新请求(新 reqId)→ 整体清空重建;
- * 当前请求内,每个 llm 步骤一组 [🧠思维链(折叠) + 🖥️正文],按流水线顺序排列;builtin 不显示。
+ * st-lite-agent 前端插件:悬浮球 + 悬浮窗(SSE 流式)
+ * 服务端 /agent/stream 推送:reset(新请求,整体清空)+ text(各 llm 步骤的思维链/正文增量)
  */
 const IS_THIRD_PARTY = typeof location !== 'undefined' && location.pathname.includes('/extensions/third-party/');
 const CORE_PATH = IS_THIRD_PARTY ? '../../../../../' : '../../../../';
@@ -9,16 +8,11 @@ const { eventSource, event_types } = await import(CORE_PATH + 'script.js');
 
 const MODULE = 'st-lite-agent';
 const LS_BASE = 'st-lite-agent-base';
-const LS_FOLLOW = 'st-lite-agent-follow';
 
 let base = localStorage.getItem(LS_BASE) || 'http://127.0.0.1:7890';
-let followLatest = localStorage.getItem(LS_FOLLOW) !== '0';
 let panelOpen = false;
-let pollTimer = null;
-let requests = [];
-let stageTypes = {};
-let cur = { reqId: null };
-let offsets = {};
+let es = null;
+let bodyEl = null;
 
 function h(tag, attrs, children) {
   const node = document.createElement(tag);
@@ -43,7 +37,7 @@ function css() {
     '#lite-agent-panel { position: fixed; right: 18px; bottom: 76px; width: 520px; max-width: 94vw; height: 66vh; background: rgba(13,17,24,0.96); border: 1px solid rgba(0,240,255,0.35); border-radius: 10px; color: #c8d6e5; z-index: 99998; display: none; flex-direction: column; font-family: system-ui, sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }',
     '#lite-agent-panel.open { display: flex; }',
     '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }',
-    '#lite-agent-head select, #lite-agent-head input[type=text] { background: #101722; color: #c8d6e5; border: 1px solid rgba(0,240,255,0.3); border-radius: 4px; padding: 3px 6px; font-size: 12px; }',
+    '#lite-agent-head input[type=text] { background: #101722; color: #c8d6e5; border: 1px solid rgba(0,240,255,0.3); border-radius: 4px; padding: 3px 6px; font-size: 12px; }',
     '#lite-agent-body { flex: 1; overflow-y: auto; padding: 8px 10px; }',
     '.la-group { margin-bottom: 12px; }',
     '.la-group-label { color: #5f7488; font-size: 11px; margin-bottom: 4px; }',
@@ -91,39 +85,22 @@ function buildBall() {
   document.body.appendChild(ball);
 }
 
-function llmStagesOf(reqId) {
-  const req = requests.find((r) => r.id === reqId);
-  if (!req) return [];
-  const files = req.files || [];
-  return Object.keys(stageTypes).filter((id) => stageTypes[id] === 'llm' && files.includes(id + '.output.txt'));
-}
-
 function buildPanel() {
   if (document.getElementById('lite-agent-panel')) return;
-  const sel = h('select', { id: 'lite-agent-req' });
   const baseInput = h('input', { type: 'text', id: 'lite-agent-base', value: base, style: 'width:150px' });
   baseInput.addEventListener('change', () => {
     base = baseInput.value.trim() || 'http://127.0.0.1:7890';
     localStorage.setItem(LS_BASE, base);
-  });
-  const follow = h('input', { type: 'checkbox', id: 'lite-agent-follow' });
-  follow.checked = followLatest;
-  follow.addEventListener('change', () => {
-    followLatest = follow.checked;
-    localStorage.setItem(LS_FOLLOW, followLatest ? '1' : '0');
-    if (followLatest && requests.length) renderFor(requests[0].id);
+    reconnect();
   });
   const status = h('span', { id: 'lite-agent-status' });
-  const clearBtn = h('button', { text: '清空', onclick: () => renderFor(cur.reqId) });
-  const body = h('div', { id: 'lite-agent-body' });
+  const clearBtn = h('button', { text: '清空', onclick: () => { if (bodyEl) bodyEl.innerHTML = ''; } });
+  bodyEl = h('div', { id: 'lite-agent-body' });
   const head = h('div', { id: 'lite-agent-head' }, [
     h('span', { text: '⚡ st-lite-agent', style: 'color:#00f0ff;font-weight:bold' }),
-    status, sel, baseInput,
-    h('label', { style: 'font-size:12px;color:#8aa0b5' }, [follow, h('span', { text: '跟随最新' })]),
-    clearBtn,
+    status, baseInput, clearBtn,
   ]);
-  const panel = h('div', { id: 'lite-agent-panel' }, [head, body]);
-  sel.addEventListener('change', () => renderFor(sel.value, true));
+  const panel = h('div', { id: 'lite-agent-panel' }, [head, bodyEl]);
   document.body.appendChild(panel);
 }
 
@@ -131,94 +108,44 @@ function togglePanel() {
   panelOpen = !panelOpen;
   const panel = document.getElementById('lite-agent-panel');
   if (panel) panel.classList.toggle('open', panelOpen);
-  if (panelOpen && cur.reqId) renderFor(cur.reqId);
 }
 
-// 整体清空重建:每个 llm 步骤一组(思维链+正文)
-function renderFor(reqId, manual) {
-  if (!reqId) return;
-  const body = document.getElementById('lite-agent-body');
-  if (!body) return;
-  const isNew = cur.reqId !== reqId;
-  cur.reqId = reqId;
-  offsets = {};
-  body.innerHTML = '';
-  const stages = llmStagesOf(reqId);
-  if (!stages.length) {
-    body.appendChild(h('div', { class: 'la-dim', text: '暂无 llm 步骤' }));
+function renderGroups(stages) {
+  if (!bodyEl) return;
+  bodyEl.innerHTML = '';
+  if (!stages || !stages.length) {
+    bodyEl.appendChild(h('div', { class: 'la-dim', text: '暂无 llm 步骤' }));
+    return;
   }
-  stages.forEach((stage) => {
-    offsets[stage + '.reason'] = 0;
-    offsets[stage + '.out'] = 0;
-    const reasonPre = h('pre', { class: 'la-pre', id: 'la-reason-' + stage });
+  stages.forEach((st) => {
+    const reasonPre = h('pre', { class: 'la-pre', id: 'la-reason-' + st.id });
     const det = h('details', { class: 'la-reason' });
-    det.appendChild(h('summary', { text: '🧠 思维链 - ' + stage }));
+    det.appendChild(h('summary', { text: '🧠 思维链 - ' + st.id }));
     det.appendChild(h('div', { class: 'la-reason-body' }, [reasonPre]));
-    const outPre = h('pre', { class: 'la-pre', id: 'la-out-' + stage });
+    const outPre = h('pre', { class: 'la-pre', id: 'la-out-' + st.id });
     const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
       if (outPre) navigator.clipboard && navigator.clipboard.writeText(outPre.textContent);
     } });
     const outCard = h('div', { class: 'la-card' }, [
-      h('div', { class: 'la-card-head' }, [h('span', { text: '🖥️ 正文 - ' + stage }), copyBtn]),
+      h('div', { class: 'la-card-head' }, [h('span', { text: '🖥️ 正文 - ' + st.id }), copyBtn]),
       outPre,
     ]);
-    body.appendChild(h('div', { class: 'la-group' }, [
-      h('div', { class: 'la-group-label', text: stage }),
+    bodyEl.appendChild(h('div', { class: 'la-group' }, [
+      h('div', { class: 'la-group-label', text: st.id }),
       det, outCard,
     ]));
   });
-  const sel = document.getElementById('lite-agent-req');
-  if (sel && (manual || !isNew)) sel.value = reqId;
-  pollOnce();
+  bodyEl.scrollTop = bodyEl.scrollHeight;
 }
 
-async function pollFile(stage, kind) {
-  const file = kind === 'out' ? 'output.txt' : 'reasoning.txt';
-  const el = document.getElementById(kind === 'out' ? 'la-out-' + stage : 'la-reason-' + stage);
-  if (!el) return;
-  const key = stage + '.' + kind;
-  const off = offsets[key] || 0;
-  try {
-    const res = await fetch(base + '/agent/steps/' + encodeURIComponent(cur.reqId) + '/' + stage + '.' + file + '?offset=' + off);
-    const data = await res.json();
-    if (data.exists === false) return;
-    if (data.text) {
-      el.textContent += data.text;
-      el.scrollTop = el.scrollHeight;
-      offsets[key] = data.offset;
-    }
-  } catch (e) {}
-}
-
-async function pollOnce() {
-  if (!cur.reqId || !panelOpen) return;
-  const stages = llmStagesOf(cur.reqId);
-  for (const stage of stages) {
-    await pollFile(stage, 'reason');
-    await pollFile(stage, 'out');
-  }
-  const body = document.getElementById('lite-agent-body');
-  if (body) body.scrollTop = body.scrollHeight;
-}
-
-async function fetchRequests() {
-  try {
-    const res = await fetch(base + '/agent/requests');
-    const data = await res.json();
-    requests = data.requests || [];
-    stageTypes = data.types || {};
-    const sel = document.getElementById('lite-agent-req');
-    if (sel) {
-      const curId = cur.reqId;
-      sel.innerHTML = '';
-      requests.forEach((rq) => sel.appendChild(h('option', { value: rq.id, text: new Date(rq.mtime).toLocaleTimeString() + ' ' + rq.id })));
-      if (curId) sel.value = curId;
-    }
-    if (followLatest && requests.length && cur.reqId !== requests[0].id) renderFor(requests[0].id);
-    else if (!cur.reqId && requests.length) renderFor(requests[0].id);
-    setStatus(true);
-  } catch (e) {
-    setStatus(false);
+function appendText(stage, kind, text) {
+  if (!text) return;
+  const id = (kind === 'reasoning' ? 'la-reason-' : 'la-out-') + stage;
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent += text;
+    el.scrollTop = el.scrollHeight;
+    if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
   }
 }
 
@@ -227,14 +154,27 @@ function setStatus(ok) {
   if (st) st.className = ok ? 'ok' : 'err';
 }
 
-function startPolling() {
-  if (pollTimer) return;
-  const tick = async () => {
-    await fetchRequests();
-    if (panelOpen) await pollOnce();
-  };
-  tick();
-  pollTimer = setInterval(tick, 800);
+function connect() {
+  if (es) es.close();
+  es = new EventSource(base + '/agent/stream');
+  es.onopen = () => setStatus(true);
+  es.onerror = () => setStatus(false);
+  es.addEventListener('reset', (ev) => {
+    try {
+      const data = JSON.parse(ev.data);
+      renderGroups(data.stages || []);
+    } catch (e) {}
+  });
+  es.addEventListener('text', (ev) => {
+    try {
+      const data = JSON.parse(ev.data);
+      appendText(data.stage, data.kind, data.text);
+    } catch (e) {}
+  });
+}
+
+function reconnect() {
+  connect();
 }
 
 jQuery(async () => {
@@ -242,7 +182,7 @@ jQuery(async () => {
   css();
   buildBall();
   buildPanel();
-  startPolling();
-  console.log('[' + MODULE + '] 悬浮面板已就绪,接口基址 ' + base);
+  connect();
+  console.log('[' + MODULE + '] SSE 面板已就绪,接口基址 ' + base);
 });
 
