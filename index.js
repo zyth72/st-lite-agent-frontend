@@ -1,6 +1,7 @@
 /**
  * st-lite-agent 前端插件:悬浮球 + 悬浮窗
- * 面板只显示最新一条:新请求一到,自动清空并从头流式显示(思维链在上可折叠,正文在下)。
+ * 逻辑:酒馆发新请求(新 reqId)→ 整体清空重建;
+ * 当前请求内,每个 llm 步骤一组 [🧠思维链(折叠) + 🖥️正文],按流水线顺序排列;builtin 不显示。
  */
 const IS_THIRD_PARTY = typeof location !== 'undefined' && location.pathname.includes('/extensions/third-party/');
 const CORE_PATH = IS_THIRD_PARTY ? '../../../../../' : '../../../../';
@@ -16,8 +17,8 @@ let panelOpen = false;
 let pollTimer = null;
 let requests = [];
 let stageTypes = {};
-let cur = { reqId: null, out: 0, reason: 0 };
-let reasonPre = null, outPre = null;
+let cur = { reqId: null };
+let offsets = {};
 
 function h(tag, attrs, children) {
   const node = document.createElement(tag);
@@ -44,10 +45,12 @@ function css() {
     '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }',
     '#lite-agent-head select, #lite-agent-head input[type=text] { background: #101722; color: #c8d6e5; border: 1px solid rgba(0,240,255,0.3); border-radius: 4px; padding: 3px 6px; font-size: 12px; }',
     '#lite-agent-body { flex: 1; overflow-y: auto; padding: 8px 10px; }',
+    '.la-group { margin-bottom: 12px; }',
+    '.la-group-label { color: #5f7488; font-size: 11px; margin-bottom: 4px; }',
     '.la-card { background: rgba(13,20,30,0.88); border: 1px solid rgba(90,160,220,0.3); border-radius: 8px; padding: 8px 10px; position: relative; }',
     '.la-card-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: #9bb8d0; font-size: 12px; }',
     '.la-copy { margin-left: auto; background: #16222f; color: #6fa8d8; border: 1px solid rgba(90,160,220,0.4); border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }',
-    '.la-pre { margin: 0; padding: 6px 8px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 36vh; overflow-y: auto; color: #b8ccdd; }',
+    '.la-pre { margin: 0; padding: 6px 8px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 32vh; overflow-y: auto; color: #b8ccdd; }',
     'details.la-reason { margin-bottom: 8px; }',
     'details.la-reason > summary { background: rgba(20,30,45,0.92); border: 1px solid rgba(90,160,220,0.35); border-radius: 8px; padding: 5px 10px; cursor: pointer; color: #9bb8d0; font-size: 12px; font-weight: bold; list-style: none; display: flex; align-items: center; gap: 6px; }',
     'details.la-reason > summary::before { content: \'▸\'; color: #5f7488; }',
@@ -88,6 +91,13 @@ function buildBall() {
   document.body.appendChild(ball);
 }
 
+function llmStagesOf(reqId) {
+  const req = requests.find((r) => r.id === reqId);
+  if (!req) return [];
+  const files = req.files || [];
+  return Object.keys(stageTypes).filter((id) => stageTypes[id] === 'llm' && files.includes(id + '.output.txt'));
+}
+
 function buildPanel() {
   if (document.getElementById('lite-agent-panel')) return;
   const sel = h('select', { id: 'lite-agent-req' });
@@ -101,23 +111,11 @@ function buildPanel() {
   follow.addEventListener('change', () => {
     followLatest = follow.checked;
     localStorage.setItem(LS_FOLLOW, followLatest ? '1' : '0');
-    if (followLatest && requests.length) followTo(requests[0].id);
+    if (followLatest && requests.length) renderFor(requests[0].id);
   });
   const status = h('span', { id: 'lite-agent-status' });
-  reasonPre = h('pre', { class: 'la-pre', id: 'la-reason' });
-  const det = h('details', { class: 'la-reason' });
-  det.appendChild(h('summary', { text: '🧠 思维链' }));
-  det.appendChild(h('div', { class: 'la-reason-body' }, [reasonPre]));
-  outPre = h('pre', { class: 'la-pre', id: 'la-out' });
-  const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
-    if (outPre) navigator.clipboard && navigator.clipboard.writeText(outPre.textContent);
-  } });
-  const outCard = h('div', { class: 'la-card' }, [
-    h('div', { class: 'la-card-head' }, [h('span', { text: '🖥️ 正文' }), copyBtn]),
-    outPre,
-  ]);
-  const body = h('div', { id: 'lite-agent-body' }, [det, outCard]);
-  const clearBtn = h('button', { text: '清空', onclick: () => resetView() });
+  const clearBtn = h('button', { text: '清空', onclick: () => renderFor(cur.reqId) });
+  const body = h('div', { id: 'lite-agent-body' });
   const head = h('div', { id: 'lite-agent-head' }, [
     h('span', { text: '⚡ st-lite-agent', style: 'color:#00f0ff;font-weight:bold' }),
     status, sel, baseInput,
@@ -125,7 +123,7 @@ function buildPanel() {
     clearBtn,
   ]);
   const panel = h('div', { id: 'lite-agent-panel' }, [head, body]);
-  sel.addEventListener('change', () => followTo(sel.value, true));
+  sel.addEventListener('change', () => renderFor(sel.value, true));
   document.body.appendChild(panel);
 }
 
@@ -133,47 +131,74 @@ function togglePanel() {
   panelOpen = !panelOpen;
   const panel = document.getElementById('lite-agent-panel');
   if (panel) panel.classList.toggle('open', panelOpen);
-  if (panelOpen) pollOnce();
+  if (panelOpen && cur.reqId) renderFor(cur.reqId);
 }
 
-function resetView() {
-  if (reasonPre) reasonPre.textContent = '';
-  if (outPre) outPre.textContent = '';
-  cur.out = 0;
-  cur.reason = 0;
-}
-
-function followTo(id, manual) {
-  if (cur.reqId !== id) {
-    cur.reqId = id;
-    resetView();
+// 整体清空重建:每个 llm 步骤一组(思维链+正文)
+function renderFor(reqId, manual) {
+  if (!reqId) return;
+  const body = document.getElementById('lite-agent-body');
+  if (!body) return;
+  const isNew = cur.reqId !== reqId;
+  cur.reqId = reqId;
+  offsets = {};
+  body.innerHTML = '';
+  const stages = llmStagesOf(reqId);
+  if (!stages.length) {
+    body.appendChild(h('div', { class: 'la-dim', text: '暂无 llm 步骤' }));
   }
+  stages.forEach((stage) => {
+    offsets[stage + '.reason'] = 0;
+    offsets[stage + '.out'] = 0;
+    const reasonPre = h('pre', { class: 'la-pre', id: 'la-reason-' + stage });
+    const det = h('details', { class: 'la-reason' });
+    det.appendChild(h('summary', { text: '🧠 思维链 - ' + stage }));
+    det.appendChild(h('div', { class: 'la-reason-body' }, [reasonPre]));
+    const outPre = h('pre', { class: 'la-pre', id: 'la-out-' + stage });
+    const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
+      if (outPre) navigator.clipboard && navigator.clipboard.writeText(outPre.textContent);
+    } });
+    const outCard = h('div', { class: 'la-card' }, [
+      h('div', { class: 'la-card-head' }, [h('span', { text: '🖥️ 正文 - ' + stage }), copyBtn]),
+      outPre,
+    ]);
+    body.appendChild(h('div', { class: 'la-group' }, [
+      h('div', { class: 'la-group-label', text: stage }),
+      det, outCard,
+    ]));
+  });
   const sel = document.getElementById('lite-agent-req');
-  if (sel && manual) sel.value = id;
+  if (sel && (manual || !isNew)) sel.value = reqId;
   pollOnce();
 }
 
-async function pollFile(kind) {
+async function pollFile(stage, kind) {
   const file = kind === 'out' ? 'output.txt' : 'reasoning.txt';
-  const el = kind === 'out' ? outPre : reasonPre;
+  const el = document.getElementById(kind === 'out' ? 'la-out-' + stage : 'la-reason-' + stage);
   if (!el) return;
-  const off = cur[kind] || 0;
+  const key = stage + '.' + kind;
+  const off = offsets[key] || 0;
   try {
-    const res = await fetch(base + '/agent/steps/' + encodeURIComponent(cur.reqId) + '/writer.' + file + '?offset=' + off);
+    const res = await fetch(base + '/agent/steps/' + encodeURIComponent(cur.reqId) + '/' + stage + '.' + file + '?offset=' + off);
     const data = await res.json();
     if (data.exists === false) return;
     if (data.text) {
       el.textContent += data.text;
       el.scrollTop = el.scrollHeight;
-      cur[kind] = data.offset;
+      offsets[key] = data.offset;
     }
   } catch (e) {}
 }
 
 async function pollOnce() {
   if (!cur.reqId || !panelOpen) return;
-  await pollFile('reason');
-  await pollFile('out');
+  const stages = llmStagesOf(cur.reqId);
+  for (const stage of stages) {
+    await pollFile(stage, 'reason');
+    await pollFile(stage, 'out');
+  }
+  const body = document.getElementById('lite-agent-body');
+  if (body) body.scrollTop = body.scrollHeight;
 }
 
 async function fetchRequests() {
@@ -189,8 +214,8 @@ async function fetchRequests() {
       requests.forEach((rq) => sel.appendChild(h('option', { value: rq.id, text: new Date(rq.mtime).toLocaleTimeString() + ' ' + rq.id })));
       if (curId) sel.value = curId;
     }
-    if (followLatest && requests.length) followTo(requests[0].id);
-    else if (!cur.reqId && requests.length) followTo(requests[0].id);
+    if (followLatest && requests.length && cur.reqId !== requests[0].id) renderFor(requests[0].id);
+    else if (!cur.reqId && requests.length) renderFor(requests[0].id);
     setStatus(true);
   } catch (e) {
     setStatus(false);
