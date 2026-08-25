@@ -1,8 +1,7 @@
 /**
  * st-lite-agent 前端插件:悬浮球 + 悬浮窗
- * 面板按 llm 步骤自动分区块:结果在上,思维链可折叠;内容流式增量刷新。
+ * 面板按流式顺序展示:每条请求一组 [思维链(可折叠,默认收起,在上) + 正文(在下)],不断累积。
  */
-// 酒馆会把扩展装到两个位置,按位置自适应 script.js 深度
 const IS_THIRD_PARTY = typeof location !== 'undefined' && location.pathname.includes('/extensions/third-party/');
 const CORE_PATH = IS_THIRD_PARTY ? '../../../../../' : '../../../../';
 const { eventSource, event_types } = await import(CORE_PATH + 'script.js');
@@ -18,7 +17,7 @@ let pollTimer = null;
 let currentReqId = null;
 let requests = [];
 let stageTypes = {};
-let offsets = {};
+let entries = {};
 
 function h(tag, attrs, children) {
   const node = document.createElement(tag);
@@ -44,21 +43,18 @@ function css() {
     '#lite-agent-panel.open { display: flex; }',
     '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }',
     '#lite-agent-head select, #lite-agent-head input[type=text] { background: #101722; color: #c8d6e5; border: 1px solid rgba(0,240,255,0.3); border-radius: 4px; padding: 3px 6px; font-size: 12px; }',
-    '#lite-agent-body { flex: 1; overflow-y: auto; padding: 8px 10px; }',
-    '.la-section { margin-bottom: 10px; }',
-    '.la-sec-head { background: rgba(20,30,45,0.92); border: 1px solid rgba(90,160,220,0.35); border-radius: 8px; padding: 6px 10px; color: #9bb8d0; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; }',
-    '.la-sec-head .chev { margin-left: auto; color: #5f7488; font-size: 11px; }',
-    '.la-sec-content { padding: 6px 2px; }',
+    '#lite-agent-feed { flex: 1; overflow-y: auto; padding: 8px 10px; }',
+    '.la-entry { margin-bottom: 10px; }',
+    '.la-entry-label { color: #5f7488; font-size: 11px; margin-bottom: 4px; }',
     '.la-card { background: rgba(13,20,30,0.88); border: 1px solid rgba(90,160,220,0.3); border-radius: 8px; padding: 8px 10px; position: relative; }',
     '.la-card-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: #9bb8d0; font-size: 12px; }',
     '.la-copy { margin-left: auto; background: #16222f; color: #6fa8d8; border: 1px solid rgba(90,160,220,0.4); border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }',
-    '.la-pre { margin: 0; padding: 6px 8px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 40vh; overflow-y: auto; color: #b8ccdd; }',
-    'details.la-reason { margin-top: 8px; }',
+    '.la-pre { margin: 0; padding: 6px 8px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 34vh; overflow-y: auto; color: #b8ccdd; }',
+    'details.la-reason { margin-bottom: 8px; }',
     'details.la-reason > summary { background: rgba(20,30,45,0.92); border: 1px solid rgba(90,160,220,0.35); border-radius: 8px; padding: 5px 10px; cursor: pointer; color: #9bb8d0; font-size: 12px; font-weight: bold; list-style: none; display: flex; align-items: center; gap: 6px; }',
     'details.la-reason > summary::before { content: \'▸\'; color: #5f7488; }',
     'details.la-reason[open] > summary::before { content: \'▾\'; }',
     'details.la-reason > .la-reason-body { background: rgba(10,16,24,0.9); border: 1px solid rgba(90,160,220,0.25); border-radius: 8px; padding: 8px 10px; margin-top: 6px; }',
-    '.la-dim { color: #5f7488; font-size: 12px; padding: 10px; }',
     '#lite-agent-status { width: 8px; height: 8px; border-radius: 50%; background: #555; display: inline-block; }',
     '#lite-agent-status.ok { background: #2ecc71; }',
     '#lite-agent-status.err { background: #e74c3c; }',
@@ -106,21 +102,23 @@ function buildPanel() {
   follow.addEventListener('change', () => {
     followLatest = follow.checked;
     localStorage.setItem(LS_FOLLOW, followLatest ? '1' : '0');
-    if (followLatest && requests.length) selectRequest(requests[0].id);
+    if (followLatest && requests.length) followTo(requests[0].id);
   });
   const status = h('span', { id: 'lite-agent-status' });
-  const clearBtn = h('button', { text: '清空', onclick: () => { offsets = {}; renderSections(); pollOnce(); } });
+  const clearBtn = h('button', { text: '清空', onclick: () => {
+    const feed = document.getElementById('lite-agent-feed');
+    if (feed) feed.innerHTML = '';
+    entries = {};
+  } });
   const head = h('div', { id: 'lite-agent-head' }, [
     h('span', { text: '⚡ st-lite-agent', style: 'color:#00f0ff;font-weight:bold' }),
-    status,
-    sel,
-    baseInput,
+    status, sel, baseInput,
     h('label', { style: 'font-size:12px;color:#8aa0b5' }, [follow, h('span', { text: '跟随最新' })]),
     clearBtn,
   ]);
-  const body = h('div', { id: 'lite-agent-body' });
-  const panel = h('div', { id: 'lite-agent-panel' }, [head, body]);
-  sel.addEventListener('change', () => selectRequest(sel.value));
+  const feed = h('div', { id: 'lite-agent-feed' });
+  const panel = h('div', { id: 'lite-agent-panel' }, [head, feed]);
+  sel.addEventListener('change', () => followTo(sel.value, true));
   document.body.appendChild(panel);
 }
 
@@ -128,90 +126,75 @@ function togglePanel() {
   panelOpen = !panelOpen;
   const panel = document.getElementById('lite-agent-panel');
   if (panel) panel.classList.toggle('open', panelOpen);
-  if (panelOpen) { renderSections(); pollOnce(); }
+  if (panelOpen && currentReqId && !entries[currentReqId]) createEntry(currentReqId);
 }
 
-function stageSections() {
-  const req = requests.find((r) => r.id === currentReqId);
-  if (!req) return [];
-  const files = req.files || [];
-  return (req.stages || []).filter((st) => stageTypes[st] === 'llm' && files.includes(st + '.output.txt')).map((st) => ({
-    stage: st,
-    hasReasoning: files.includes(st + '.reasoning.txt'),
-  }));
+function llmStageId() {
+  let last = null;
+  for (const [id, type] of Object.entries(stageTypes)) if (type === 'llm') last = id;
+  return last;
 }
 
-function renderSections() {
-  const body = document.getElementById('lite-agent-body');
-  if (!body) return;
-  body.innerHTML = '';
-  const sections = stageSections();
-  if (!sections.length) {
-    body.appendChild(h('div', { class: 'la-dim', text: '暂无 llm 步骤(流水线未运行,或还没有日志)' }));
-    return;
-  }
-  sections.forEach((sec) => {
-    offsets[sec.stage + '.output.txt'] = 0;
-    const resultPre = h('pre', { class: 'la-pre', id: 'la-out-' + sec.stage });
-    const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
-      const el = document.getElementById('la-out-' + sec.stage);
-      if (el) navigator.clipboard && navigator.clipboard.writeText(el.textContent);
-    } });
-    const resultCard = h('div', { class: 'la-card' }, [
-      h('div', { class: 'la-card-head' }, [h('span', { text: '🖥️ 结果' }), copyBtn]),
-      resultPre,
-    ]);
-    const content = h('div', { class: 'la-sec-content' }, [resultCard]);
-    if (sec.hasReasoning) {
-      offsets[sec.stage + '.reasoning.txt'] = 0;
-      const det = h('details', { class: 'la-reason' });
-      det.appendChild(h('summary', { text: '🧠 思维链' }));
-      det.appendChild(h('div', { class: 'la-reason-body' }, [h('pre', { class: 'la-pre', id: 'la-reason-' + sec.stage })]));
-      content.appendChild(det);
-    }
-    const head = h('div', { class: 'la-sec-head' }, [
-      h('span', { text: '🖥️ ' + sec.stage }),
-      h('span', { class: 'chev', text: '▼' }),
-    ]);
-    head.addEventListener('click', () => {
-      content.style.display = content.style.display === 'none' ? '' : 'none';
-    });
-    body.appendChild(h('div', { class: 'la-section' }, [head, content]));
-  });
+function createEntry(reqId) {
+  if (entries[reqId]) return;
+  const feed = document.getElementById('lite-agent-feed');
+  if (!feed) return;
+  const stage = llmStageId();
+  if (!stage) return;
+  const reasonPre = h('pre', { class: 'la-pre', id: 'la-reason-' + reqId });
+  const det = h('details', { class: 'la-reason' });
+  det.appendChild(h('summary', { text: '🧠 思维链' }));
+  det.appendChild(h('div', { class: 'la-reason-body' }, [reasonPre]));
+  const outPre = h('pre', { class: 'la-pre', id: 'la-out-' + reqId });
+  const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
+    if (outPre) navigator.clipboard && navigator.clipboard.writeText(outPre.textContent);
+  } });
+  const outCard = h('div', { class: 'la-card' }, [
+    h('div', { class: 'la-card-head' }, [h('span', { text: '🖥️ 正文' }), copyBtn]),
+    outPre,
+  ]);
+  const entry = h('div', { class: 'la-entry' }, [
+    h('div', { class: 'la-entry-label', text: new Date().toLocaleTimeString() + ' ' + reqId }),
+    det, outCard,
+  ]);
+  feed.appendChild(entry);
+  entries[reqId] = { outPre: outPre, reasonPre: reasonPre, offsets: { out: 0, reason: 0 } };
+  feed.scrollTop = feed.scrollHeight;
 }
 
-function selectRequest(id) {
-  currentReqId = id;
-  offsets = {};
+function followTo(reqId, manual) {
+  currentReqId = reqId;
   const sel = document.getElementById('lite-agent-req');
-  if (sel) sel.value = id;
-  renderSections();
-  pollOnce();
+  if (sel) sel.value = reqId;
+  createEntry(reqId);
+  if (manual) {
+    const feed = document.getElementById('lite-agent-feed');
+    if (feed) feed.scrollTop = feed.scrollHeight;
+  }
 }
 
-async function pollFile(file, elId) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  const off = offsets[file] || 0;
+async function pollFile(reqId, kind) {
+  const entry = entries[reqId];
+  if (!entry) return;
+  const file = kind === 'out' ? 'output.txt' : 'reasoning.txt';
+  const el = kind === 'out' ? entry.outPre : entry.reasonPre;
+  const off = entry.offsets[kind] || 0;
   try {
-    const res = await fetch(base + '/agent/steps/' + encodeURIComponent(currentReqId) + '/' + file + '?offset=' + off);
+    const res = await fetch(base + '/agent/steps/' + encodeURIComponent(reqId) + '/writer.' + file + '?offset=' + off);
     const data = await res.json();
     if (data.exists === false) return;
     if (data.text) {
       el.textContent += data.text;
       el.scrollTop = el.scrollHeight;
-      offsets[file] = data.offset;
+      entry.offsets[kind] = data.offset;
     }
   } catch (e) {}
 }
 
 async function pollOnce() {
-  if (!currentReqId) return;
-  const sections = stageSections();
-  for (const sec of sections) {
-    await pollFile(sec.stage + '.output.txt', 'la-out-' + sec.stage);
-    if (sec.hasReasoning) await pollFile(sec.stage + '.reasoning.txt', 'la-reason-' + sec.stage);
-  }
+  if (!currentReqId || !entries[currentReqId]) return;
+  await pollFile(currentReqId, 'reason');
+  await pollFile(currentReqId, 'out');
 }
 
 async function fetchRequests() {
@@ -224,13 +207,11 @@ async function fetchRequests() {
     if (sel) {
       const cur = currentReqId;
       sel.innerHTML = '';
-      requests.forEach((rq) => {
-        sel.appendChild(h('option', { value: rq.id, text: new Date(rq.mtime).toLocaleTimeString() + ' ' + rq.id }));
-      });
+      requests.forEach((rq) => sel.appendChild(h('option', { value: rq.id, text: new Date(rq.mtime).toLocaleTimeString() + ' ' + rq.id })));
       if (cur) sel.value = cur;
     }
-    if (followLatest && requests.length && currentReqId !== requests[0].id) selectRequest(requests[0].id);
-    else if (!currentReqId && requests.length) selectRequest(requests[0].id);
+    if (followLatest && requests.length) followTo(requests[0].id);
+    else if (!currentReqId && requests.length) followTo(requests[0].id);
     setStatus(true);
   } catch (e) {
     setStatus(false);
@@ -246,7 +227,7 @@ function startPolling() {
   if (pollTimer) return;
   const tick = async () => {
     await fetchRequests();
-    if (panelOpen && currentReqId) await pollOnce();
+    if (panelOpen) await pollOnce();
   };
   tick();
   pollTimer = setInterval(tick, 800);
