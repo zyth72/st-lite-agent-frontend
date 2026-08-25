@@ -17,6 +17,7 @@ let panelOpen = false;
 let pollTimer = null;
 let currentReqId = null;
 let requests = [];
+let stageTypes = {};
 let offsets = {};
 
 function h(tag, attrs, children) {
@@ -134,7 +135,7 @@ function stageSections() {
   const req = requests.find((r) => r.id === currentReqId);
   if (!req) return [];
   const files = req.files || [];
-  return (req.stages || []).filter((st) => files.includes(st + '.output.txt')).map((st) => ({
+  return (req.stages || []).filter((st) => stageTypes[st] === 'llm' && files.includes(st + '.output.txt')).map((st) => ({
     stage: st,
     hasReasoning: files.includes(st + '.reasoning.txt'),
   }));
@@ -218,6 +219,7 @@ async function fetchRequests() {
     const res = await fetch(base + '/agent/requests');
     const data = await res.json();
     requests = data.requests || [];
+    stageTypes = data.types || {};
     const sel = document.getElementById('lite-agent-req');
     if (sel) {
       const cur = currentReqId;
