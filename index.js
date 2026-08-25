@@ -44,12 +44,19 @@ function css() {
     '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }',
     '#lite-agent-head select, #lite-agent-head input[type=text] { background: #101722; color: #c8d6e5; border: 1px solid rgba(0,240,255,0.3); border-radius: 4px; padding: 3px 6px; font-size: 12px; }',
     '#lite-agent-body { flex: 1; overflow-y: auto; padding: 8px 10px; }',
-    '.la-section { margin-bottom: 8px; border: 1px solid rgba(0,240,255,0.18); border-radius: 6px; overflow: hidden; }',
-    '.la-sec-head { padding: 5px 10px; background: #0c1a24; color: #00f0ff; font-size: 13px; font-weight: bold; cursor: pointer; }',
-    '.la-sec-content { padding: 6px 10px; }',
-    '.la-pre { margin: 4px 0; padding: 6px 8px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 42vh; overflow-y: auto; }',
-    '.la-reason { margin-top: 4px; }',
-    '.la-reason summary { cursor: pointer; color: #8aa0b5; font-size: 12px; padding: 2px 0; }',
+    '.la-section { margin-bottom: 10px; }',
+    '.la-sec-head { background: rgba(20,30,45,0.92); border: 1px solid rgba(90,160,220,0.35); border-radius: 8px; padding: 6px 10px; color: #9bb8d0; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; }',
+    '.la-sec-head .chev { margin-left: auto; color: #5f7488; font-size: 11px; }',
+    '.la-sec-content { padding: 6px 2px; }',
+    '.la-card { background: rgba(13,20,30,0.88); border: 1px solid rgba(90,160,220,0.3); border-radius: 8px; padding: 8px 10px; position: relative; }',
+    '.la-card-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: #9bb8d0; font-size: 12px; }',
+    '.la-copy { margin-left: auto; background: #16222f; color: #6fa8d8; border: 1px solid rgba(90,160,220,0.4); border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }',
+    '.la-pre { margin: 0; padding: 6px 8px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 40vh; overflow-y: auto; color: #b8ccdd; }',
+    'details.la-reason { margin-top: 8px; }',
+    'details.la-reason > summary { background: rgba(20,30,45,0.92); border: 1px solid rgba(90,160,220,0.35); border-radius: 8px; padding: 5px 10px; cursor: pointer; color: #9bb8d0; font-size: 12px; font-weight: bold; list-style: none; display: flex; align-items: center; gap: 6px; }',
+    'details.la-reason > summary::before { content: \'▸\'; color: #5f7488; }',
+    'details.la-reason[open] > summary::before { content: \'▾\'; }',
+    'details.la-reason > .la-reason-body { background: rgba(10,16,24,0.9); border: 1px solid rgba(90,160,220,0.25); border-radius: 8px; padding: 8px 10px; margin-top: 6px; }',
     '.la-dim { color: #5f7488; font-size: 12px; padding: 10px; }',
     '#lite-agent-status { width: 8px; height: 8px; border-radius: 50%; background: #555; display: inline-block; }',
     '#lite-agent-status.ok { background: #2ecc71; }',
@@ -145,18 +152,26 @@ function renderSections() {
   sections.forEach((sec) => {
     offsets[sec.stage + '.output.txt'] = 0;
     const resultPre = h('pre', { class: 'la-pre', id: 'la-out-' + sec.stage });
-    const content = h('div', { class: 'la-sec-content' }, [
-      h('div', { class: 'la-dim', text: '结果:' }),
+    const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
+      const el = document.getElementById('la-out-' + sec.stage);
+      if (el) navigator.clipboard && navigator.clipboard.writeText(el.textContent);
+    } });
+    const resultCard = h('div', { class: 'la-card' }, [
+      h('div', { class: 'la-card-head' }, [h('span', { text: '🖥️ 结果' }), copyBtn]),
       resultPre,
     ]);
+    const content = h('div', { class: 'la-sec-content' }, [resultCard]);
     if (sec.hasReasoning) {
       offsets[sec.stage + '.reasoning.txt'] = 0;
       const det = h('details', { class: 'la-reason' });
-      det.appendChild(h('summary', { text: '思维链(点击折叠)' }));
-      det.appendChild(h('pre', { class: 'la-pre', id: 'la-reason-' + sec.stage }));
+      det.appendChild(h('summary', { text: '🧠 思维链' }));
+      det.appendChild(h('div', { class: 'la-reason-body' }, [h('pre', { class: 'la-pre', id: 'la-reason-' + sec.stage })]));
       content.appendChild(det);
     }
-    const head = h('div', { class: 'la-sec-head', text: '▾ ' + sec.stage });
+    const head = h('div', { class: 'la-sec-head' }, [
+      h('span', { text: '🖥️ ' + sec.stage }),
+      h('span', { class: 'chev', text: '▼' }),
+    ]);
     head.addEventListener('click', () => {
       content.style.display = content.style.display === 'none' ? '' : 'none';
     });
