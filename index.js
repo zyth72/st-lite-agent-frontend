@@ -54,8 +54,8 @@ function css() {
   const s = document.createElement('style');
   s.id = 'lite-agent-style';
   s.textContent = [
-    '#lite-agent-ball { position: fixed; width: 46px; height: 46px; border-radius: 50%; background: rgba(13,20,30,0.85); border: 2px solid rgba(0,240,255,0.55); color: #00f0ff; font-size: 20px; line-height: 42px; text-align: center; cursor: pointer; z-index: 99999; user-select: none; touch-action: none; box-shadow: 0 0 12px rgba(0,240,255,0.25); }',
-    '#lite-agent-panel { position: fixed; width: 520px; max-width: 94vw; height: 66vh; background: rgba(13,17,24,0.96); border: 1px solid rgba(0,240,255,0.35); border-radius: 10px; color: #c8d6e5; z-index: 99998; display: none; flex-direction: column; font-family: system-ui, sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }',
+    '#lite-agent-ball { position: fixed; width: 46px; height: 46px; border-radius: 50%; background: rgba(13,20,30,0.85); border: 2px solid rgba(0,240,255,0.55); color: #00f0ff; font-size: 20px; line-height: 42px; text-align: center; cursor: pointer; z-index: 2147483647; user-select: none; touch-action: none; transform: translateZ(0); box-shadow: 0 0 12px rgba(0,240,255,0.25); }',
+    '#lite-agent-panel { position: fixed; width: 520px; max-width: 94vw; height: 66vh; background: rgba(13,17,24,0.96); border: 1px solid rgba(0,240,255,0.35); border-radius: 10px; color: #c8d6e5; z-index: 2147483646; display: none; flex-direction: column; font-family: system-ui, sans-serif; transform: translateZ(0); box-shadow: 0 8px 30px rgba(0,0,0,0.6); }',
     '#lite-agent-panel.open { display: flex; }',
     '#lite-agent-head { padding: 8px 10px; border-bottom: 1px solid rgba(0,240,255,0.2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; cursor: move; touch-action: none; user-select: none; }',
     '#lite-agent-head input[type=text] { background: #101722; color: #c8d6e5; border: 1px solid rgba(0,240,255,0.3); border-radius: 4px; padding: 3px 6px; font-size: 12px; }',
@@ -134,6 +134,9 @@ function makeDraggable(handle, target, pos, onSave) {
 
 function buildBall() {
   if (document.getElementById('lite-agent-ball')) return;
+  if (window.innerWidth <= 768 && !localStorage.getItem(LS_BALL)) {
+    ballPos = { right: 12, bottom: 12 };
+  }
   const ball = h('div', { id: 'lite-agent-ball', title: 'st-lite-agent 面板', text: '⚡' });
   ball.style.right = ballPos.right + 'px';
   ball.style.bottom = ballPos.bottom + 'px';
