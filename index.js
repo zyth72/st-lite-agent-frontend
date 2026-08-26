@@ -1,61 +1,32 @@
 /**
- * st-lite-agent 前端插件入口:悬浮球 + 可拖动悬浮窗(SSE 流式)。
- * 职责:扩展环境探测、状态持有(基址/位置)、模块装配与 resize 处理。
- *
- * 模块划分(单入口,其余为 ES module 拆件):
- *   dom.js        DOM 构建工具
- *   styles.js     样式注入
- *   position.js   位置读写/夹取/拖动
- *   ui.js         悬浮球/面板构建与开合
- *   sse.js        SSE 连接
- *   render.js     面板内容渲染(段分组/markdown/状态图标)
- *   settings.js   ⚙️ 设置面板(agent 段/上游/密钥)
+ * st-lite-agent 前端插件入口(ST 扩展)。
+ * 职责:环境探测(第三方/内置路径)、注入样式、挂载 Vue 应用、连接 SSE。
+ * 底层:Vue 3(esm-browser 运行时,含模板编译器)+ store/hooks,无构建。
  */
 import { css } from './styles.js';
-import { buildBall, buildPanel, togglePanel } from './ui.js';
-import { loadPos, clampPos } from './position.js';
-import { connect } from './sse.js';
-import { toggleSettings } from './settings.js';
+import { createApp } from './vue.esm-browser.prod.js';
+import App from './app.js';
+import { connect, base } from './store.js';
 
 const IS_THIRD_PARTY = typeof location !== 'undefined' && location.pathname.includes('/extensions/third-party/');
 const CORE_PATH = IS_THIRD_PARTY ? '../../../../../' : '../../../../';
 const { eventSource, event_types } = await import(CORE_PATH + 'script.js');
 
 const MODULE = 'st-lite-agent';
-const LS_BASE = 'st-lite-agent-base';
-const LS_BALL = 'st-lite-agent-ball-pos';
-const LS_PANEL = 'st-lite-agent-panel-pos';
 
-let base = localStorage.getItem(LS_BASE) || 'http://127.0.0.1:7890';
-let ballPos = clampPos(loadPos(LS_BALL, { right: 18, bottom: 18 }), 54, 54);
-let panelPos = clampPos(loadPos(LS_PANEL, { right: 18, bottom: 76 }), 520, Math.round(window.innerHeight * 0.66));
-
-function onBaseChange(nextBase) {
-  base = nextBase;
-  localStorage.setItem(LS_BASE, base);
-  connect(base);
+function boot() {
+  if (document.getElementById('lite-agent-root')) return;
+  css();
+  const mount = document.createElement('div');
+  mount.id = 'lite-agent-root';
+  document.body.appendChild(mount);
+  createApp(App).mount(mount);
+  connect();
+  console.log('[' + MODULE + '] Vue 面板已就绪,接口基址 ' + base.value);
 }
 
-jQuery(async () => {
-  if (document.getElementById('lite-agent-ball')) return;
-  css();
-  buildBall({ pos: ballPos, onToggle: togglePanel });
-  buildPanel({ pos: panelPos, base, onBaseChange, onToggleSettings: () => toggleSettings(base) });
-  connect(base);
-  console.log('[' + MODULE + '] SSE 面板已就绪,接口基址 ' + base);
-
-  window.addEventListener('resize', () => {
-    const ball = document.getElementById('lite-agent-ball');
-    const panel = document.getElementById('lite-agent-panel');
-    if (ball) {
-      clampPos(ballPos, ball.offsetWidth, ball.offsetHeight);
-      ball.style.right = ballPos.right + 'px';
-      ball.style.bottom = ballPos.bottom + 'px';
-    }
-    if (panel) {
-      clampPos(panelPos, panel.offsetWidth, panel.offsetHeight);
-      panel.style.right = panelPos.right + 'px';
-      panel.style.bottom = panelPos.bottom + 'px';
-    }
-  });
-});
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}

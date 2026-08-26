@@ -286,7 +286,14 @@ export function css() {
 .la-set-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; }
 .la-set-row + .la-set-row { border-top: 1px solid rgba(147, 143, 153, 0.10); }
 .la-set-label { flex: 0 0 88px; color: var(--md-on-surface-variant); font-size: 12px; }
-.la-set-input { flex: 1; min-width: 0; width: auto !important; }
+.la-set-input { flex: 1; min-width: 0; width: auto !important; background: var(--md-surface-highest) !important; color: var(--md-on-surface) !important; border: 1px solid transparent !important; }
+/* ST 全局样式对 type=text 的输入框有高优先级覆盖,这里再拉起 */
+#lite-agent-panel input.la-set-input[type=text],
+#lite-agent-panel input.la-set-input:not([type]) {
+  background: #36343b !important;
+  color: #e6e1e5 !important;
+  border: 1px solid transparent !important;
+}
 .la-set-stage { display: flex; align-items: center; gap: 8px; padding: 7px 0; }
 .la-set-stage-name { flex: 0 0 88px; color: var(--md-on-surface); font-weight: 600; font-size: 12.5px; }
 .la-set-toggle { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; padding: 4px 0 8px; }

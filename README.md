@@ -31,6 +31,20 @@ SillyTavern 前端插件:悬浮球 ⚡ + 悬浮窗,实时查看服务端 agent �
 | `settings.js` | ⚙️ 设置面板(读写 `/agent/config`) |
 | `marked.esm.js` | vendored marked(v12) |
 
+## 技术栈与结构
+
+Vue 3(esm-browser 运行时,含模板编译器)原生 ESM,无构建、git pull 即用。
+
+| 文件 | 职责 |
+|---|---|
+| `index.js` | 入口:环境探测、注入样式、挂载 Vue、连 SSE |
+| `app.js` | 根组件 + StageCard(步骤卡)/SettingsView(设置) |
+| `store.js` | 响应式状态 + SSE 连接(事件写入 store) |
+| `hooks.js` | VueUse 同名小实现(useLocalStorage/useToggle/useEventListener) |
+| `vue.esm-browser.prod.js` | vendored Vue 3(含模板编译器) |
+| `marked.esm.js` | vendored marked(v12) |
+| `styles.js` | M3 样式注入 |
+
 ## 依赖
 
 - 服务端插件 `sillytavern-server-plugin` 的 `/agent/requests` 与 `/agent/steps/...` 接口(自带,无需配置)
