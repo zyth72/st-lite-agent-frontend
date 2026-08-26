@@ -294,6 +294,21 @@ export function css() {
 .la-set-max { width: 74px !important; }
 .la-set-actions { display: flex; gap: 10px; margin-top: 4px; }
 .la-set-actions button { flex: 1; }
+/* 上游卡 + 内嵌模型管理 */
+.la-provider { background: var(--md-surface-low); border-radius: 12px; padding: 4px 12px 8px; margin-bottom: 8px; }
+.la-models { margin-top: 2px; }
+.la-models > summary { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; font-size: 12px; font-weight: 500; color: var(--md-primary); cursor: pointer; user-select: none; list-style: none; transition: background .18s ease; }
+.la-models > summary::-webkit-details-marker { display: none; }
+.la-models > summary:hover { background: var(--md-state-hover); }
+.la-models > summary::before { content: '▸'; font-size: 11px; transition: transform .18s ease; }
+.la-models[open] > summary::before { transform: rotate(90deg); }
+.la-model-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 8px; }
+.la-model-row:hover { background: var(--md-state-hover); }
+.la-model-name { flex: 1; font-size: 12px; color: var(--md-on-surface-variant); word-break: break-all; }
+#lite-agent-body button.la-model-del { background: transparent !important; border: 1px solid var(--md-outline-variant) !important; color: var(--md-error) !important; border-radius: 8px !important; font-size: 11px !important; padding: 1px 8px !important; }
+#lite-agent-body button.la-model-del:hover { background: var(--md-state-hover) !important; border-color: var(--md-error) !important; }
+.la-model-add-row { display: flex; gap: 8px; padding: 6px 8px 2px; }
+.la-model-add-row input { flex: 1; min-width: 0; }
 @media (max-width: 768px) {
   .la-set-label, .la-set-stage-name { flex-basis: 76px; }
   .la-set-toggle { gap: 4px; }

@@ -60,6 +60,46 @@ function toggleItem(id, label, checked) {
   ]);
 }
 
+/** 内嵌模型管理:每行一个模型,可加/删,直接维护 cfgData.providers[i].models。 */
+function fillModelRows(box, i) {
+  const p = (cfgData.providers || [])[i];
+  if (!p) return;
+  box.innerHTML = '';
+  const rows = (p.models || []).map((m, j) => h('div', { class: 'la-model-row' }, [
+    h('span', { class: 'la-model-name', text: m }),
+    h('button', { class: 'la-model-del', text: '删', title: '删除该模型', onclick: () => {
+      p.models.splice(j, 1);
+      fillModelRows(box, i);
+    } }),
+  ]));
+  const addInput = h('input', { type: 'text', placeholder: '模型名,如 deepseek-v4-pro', class: 'la-set-input' });
+  const addBtn = h('button', { class: 'la-model-add', text: '添加', onclick: () => {
+    const v = addInput.value.trim();
+    if (v && !(p.models || []).includes(v)) {
+      p.models = p.models || [];
+      p.models.push(v);
+      addInput.value = '';
+      fillModelRows(box, i);
+    }
+  } });
+  const summary = box.closest('details') && box.closest('details').querySelector('.la-models-summary');
+  if (summary) summary.textContent = '模型管理(' + (p.models || []).length + ')';
+  if (rows.length) rows.forEach((r) => box.appendChild(r));
+  else box.appendChild(h('div', { class: 'la-set-empty', text: '(暂无模型,留空 = 自动发现)' }));
+  box.appendChild(h('div', { class: 'la-model-add-row' }, [addInput, addBtn]));
+}
+
+/** 段配置模型下拉:候选 = 各上游 provider/model;当前值不在候选则保留为一项。 */
+function modelSelect(st, i, providers) {
+  const all = [];
+  (providers || []).forEach((p) => (p.models || []).forEach((m) => all.push(p.name + '/' + m)));
+  if (st.model && !all.includes(st.model)) all.unshift(st.model);
+  const sel = h('select', { id: 'cfg-model-' + i, class: 'la-set-input' });
+  sel.appendChild(h('option', { value: '', text: '(继承外层)', selected: !st.model ? 'selected' : null }));
+  all.forEach((x) => sel.appendChild(h('option', { value: x, text: x, selected: st.model === x ? 'selected' : null })));
+  return sel;
+}
+
 function group(title, hint, rows) {
   const rowsArr = rows.length ? rows : [h('div', { class: 'la-set-empty', text: '(无)' })];
   return h('div', { class: 'la-set-group' }, [
@@ -80,19 +120,30 @@ function renderSettings() {
     sRow(k.name, h('input', { type: 'password', id: 'cfg-key-' + i, placeholder: '···' + k.hint, class: 'la-set-input' })));
   L.push(group('上游密钥', 'key 留空 = 删除该行', keyRows));
 
-  const provRows = [];
+  // 上游卡片:baseurl + 内嵌模型管理(每行一个模型,可加/删)
+  const provCards = [];
   (d.providers || []).forEach((p, i) => {
-    provRows.push(sRow(p.name, h('input', { type: 'text', id: 'cfg-purl-' + i, value: p.baseurl, class: 'la-set-input', title: 'baseurl' })));
-    provRows.push(sRow(p.name + ' models', h('input', { type: 'text', id: 'cfg-pmodels-' + i, value: (p.models || []).join(', '), class: 'la-set-input' })));
+    const box = h('div', { class: 'la-model-list' });
+    fillModelRows(box, i);
+    provCards.push(h('div', { class: 'la-provider' }, [
+      h('div', { class: 'la-set-row' }, [
+        h('span', { class: 'la-set-label', text: p.name }),
+        h('input', { type: 'text', id: 'cfg-purl-' + i, value: p.baseurl, class: 'la-set-input', title: 'baseurl' }),
+      ]),
+      h('details', { class: 'la-models' }, [
+        h('summary', { class: 'la-models-summary', text: '模型管理(' + (p.models || []).length + ')' }),
+        box,
+      ]),
+    ]));
   });
-  L.push(group('上游', 'models 逗号分隔,留空 = 自动发现', provRows));
+  L.push(group('上游', 'baseurl 与模型列表(每行一个,空 = 自动发现)', provCards));
 
   const stageRows = [];
   (d.stages || []).forEach((st, i) => {
     if (st.type !== 'llm') return;
     stageRows.push(h('div', { class: 'la-set-stage' }, [
       h('span', { class: 'la-set-stage-name', text: st.id }),
-      h('input', { type: 'text', id: 'cfg-model-' + i, value: st.model || '', placeholder: '(继承外层)', class: 'la-set-input' }),
+      modelSelect(st, i, d.providers),
     ]));
     stageRows.push(h('div', { class: 'la-set-toggle' }, [
       toggleItem('cfg-think-' + i, 'thinking', st.thinking === 'enabled'),
@@ -126,7 +177,7 @@ async function saveSettings(base) {
     const providers = (cfgData.providers || []).map((p, i) => ({
       name: p.name,
       baseurl: document.getElementById('cfg-purl-' + i) ? document.getElementById('cfg-purl-' + i).value : p.baseurl,
-      models: document.getElementById('cfg-pmodels-' + i) ? document.getElementById('cfg-pmodels-' + i).value.split(',').map((s) => s.trim()).filter(Boolean) : (p.models || []),
+      models: (p.models || []),
     }));
     const keys = (cfgData.keys || []).map((k, i) => ({
       name: k.name,

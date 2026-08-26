@@ -9,6 +9,11 @@ export function h(tag, attrs, children) {
       if (k === 'html') node.innerHTML = v;
       else if (k === 'text') node.textContent = v;
       else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+      else if (k === 'checked' || k === 'selected' || k === 'disabled' || k === 'open' || k === 'readonly' || k === 'multiple') {
+        // 布尔表单属性:用 property,值非空才生效(null/'' 不设置)
+        if (v != null && v !== '') node[k] = true;
+      }
+      else if (v == null) { /* 跳过 null,避免 setAttribute('x','null') */ }
       else node.setAttribute(k, v);
     }
   }
