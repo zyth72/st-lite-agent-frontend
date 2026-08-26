@@ -61,6 +61,27 @@ function showPlaceholder(bodyEl, text) {
   bodyEl.appendChild(h('div', { class: 'la-dim la-pending-placeholder', text: text }));
 }
 
+// 单卡整体折叠:点标题行,只留标题;再点展开
+function bindCollapse(head, group) {
+  head.addEventListener('click', () => group.classList.toggle('closed'));
+}
+
+/** 同步渲染当前队列(进入设置拍快照前调用,避免快照里缺失待渲染文本)。 */
+export function flushRenderNow() {
+  if (renderScheduled) flushRenderQueue();
+}
+
+/** 设置返回(DOM 快照恢复)后重绑所有卡片的折叠监听。 */
+export function rebindCollapse() {
+  document.querySelectorAll('#lite-agent-body .la-group').forEach((group) => {
+    const head = group.querySelector('.la-step-head');
+    if (head && !head.__bound) {
+      head.__bound = true;
+      bindCollapse(head, group);
+    }
+  });
+}
+
 /** 设置模式(⚙️)下屏蔽 SSE 渲染,避免卡片写进设置表单。 */
 function isSettingsMode() {
   const bodyEl = document.getElementById('lite-agent-body');
@@ -91,6 +112,15 @@ function makeOutSection(st, isWriter) {
   return det;
 }
 
+function makeRawSection(st) {
+  const pre = h('pre', { class: 'la-pre la-raw', id: 'la-raw-' + st.id });
+  pre._raw = '';
+  const det = h('details', { class: 'la-raw' });
+  det.appendChild(h('summary', { text: '原始 JSON' }));
+  det.appendChild(h('div', { class: 'la-reason-body' }, [pre]));
+  return det;
+}
+
 /** 懒创建某段的卡片(仅 llm 段);已存在则返回。卡片初始只有标题行。 */
 function ensureStage(stageId) {
   const bodyEl = document.getElementById('lite-agent-body');
@@ -107,8 +137,7 @@ function ensureStage(stageId) {
     h('span', { class: 'la-step-title', id: 'la-label-' + st.id, text: st.id }),
   ]);
   group = h('div', { class: 'la-group', id: 'la-group-' + st.id }, [head]);
-  // 单卡整体折叠:点标题行,只留标题;再点展开
-  head.addEventListener('click', () => group.classList.toggle('closed'));
+  bindCollapse(head, group);
   bodyEl.appendChild(group);
   if (stageStatus[st.id]) applyStatus(group, st.id, stageStatus[st.id]);
   return group;
@@ -138,20 +167,26 @@ export function restoreGroups() {
   visible.forEach((id) => ensureStage(id));
 }
 
-/** 文本流入:对应区块(思维链/正文)不存在时懒创建,哪个有文本哪个出现。 */
+/** 文本流入:对应区块(思维链/正文/原始JSON)不存在时懒创建,哪个有文本哪个出现。 */
 export function appendText(stage, kind, text) {
   if (!text || isSettingsMode()) return;
   const group = ensureStage(stage);
   if (!group) return;
   const isReason = kind === 'reasoning';
-  const secId = (isReason ? 'la-reason-' : 'la-out-') + stage;
+  const isRaw = kind === 'raw';
+  const secId = (isReason ? 'la-reason-' : isRaw ? 'la-raw-' : 'la-out-') + stage;
   let el = document.getElementById(secId);
   if (!el) {
     const st = findStage(stage) || { id: stage, type: 'llm' };
-    const det = isReason ? makeReasonSection(st) : makeOutSection(st, st.id === 'writer');
+    let det;
+    if (isReason) det = makeReasonSection(st);
+    else if (isRaw) det = makeRawSection(st);
+    else det = makeOutSection(st, st.id === 'writer');
     group.appendChild(det);
     el = det.querySelector('pre');
   }
+  // 快照/设置返回恢复的元素没有 _raw,用当前渲染文本兜底,避免流式覆盖清空旧内容
+  if (el._raw == null) el._raw = el.textContent || '';
   el._raw = (el._raw || '') + text;
   scheduleRender(el);
 }

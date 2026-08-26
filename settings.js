@@ -3,7 +3,7 @@
  * 进入设置模式替换面板内容,返回时恢复最近一次 llm 段分组。
  */
 import { h } from './dom.js';
-import { restoreGroups } from './render.js';
+import { restoreGroups, rebindCollapse, flushRenderNow } from './render.js';
 
 let settingsMode = false;
 let cfgData = null;
@@ -15,6 +15,7 @@ export function toggleSettings(base) {
   settingsMode = !settingsMode;
   if (settingsMode) {
     const bodyEl = document.getElementById('lite-agent-body');
+    flushRenderNow();
     savedBodyHTML = bodyEl ? bodyEl.innerHTML : '';
     if (bodyEl) bodyEl.dataset.mode = 'settings';
     loadSettings(base);
@@ -23,6 +24,7 @@ export function toggleSettings(base) {
     if (bodyEl) bodyEl.removeAttribute('data-mode');
     if (bodyEl && savedBodyHTML) {
       bodyEl.innerHTML = savedBodyHTML;
+      rebindCollapse();
     } else {
       restoreGroups();
     }

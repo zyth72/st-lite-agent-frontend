@@ -67,7 +67,7 @@ export function buildPanel({ pos, base, onBaseChange, onToggleSettings }) {
     h('span', { class: 'la-title', text: 'st-lite-agent' }),
     status, baseInput, clearBtn, settingsBtn,
   ]);
-  if (window.innerWidth <= 768) { pos.right = 0; pos.bottom = 0; }
+  if (window.innerWidth <= 768) { pos.right = 0; pos.bottom = 12; }
   const panel = h('div', { id: 'lite-agent-panel' }, [head, bodyEl]);
   panel.style.right = pos.right + 'px';
   panel.style.bottom = pos.bottom + 'px';

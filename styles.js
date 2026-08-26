@@ -156,7 +156,7 @@ export function css() {
 #lite-agent-body button.la-btn-tonal:hover { background: #544e63 !important; }
 
 /* ===== 面板体与滚动条 ===== */
-#lite-agent-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
+#lite-agent-body { flex: 1; overflow-y: auto; padding: 12px 14px 20px; }
 #lite-agent-body::-webkit-scrollbar { width: 8px; height: 8px; }
 #lite-agent-body::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 4px; }
 #lite-agent-body::-webkit-scrollbar-thumb:hover { background: #565266; }
@@ -251,6 +251,7 @@ export function css() {
 
 /* 写作正文:小说排版(衬线 + 大行距) */
 .la-out.la-prose .la-pre { font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif; font-size: 15.5px; line-height: 1.95; color: var(--md-on-surface); }
+.la-raw .la-pre { color: #bcd3ff; }
 
 .la-card-head { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; color: var(--md-outline); font-size: 11px; }
 .la-card-head span { letter-spacing: .06em; }
@@ -277,11 +278,11 @@ export function css() {
 /* ===== 移动端 ===== */
 @media (max-width: 768px) {
   #lite-agent-ball { width: 54px; height: 54px; font-size: 24px; line-height: 53px; border-radius: 18px; }
-  #lite-agent-panel { width: 100vw; max-width: 100vw; height: 84vh; border-radius: 24px 24px 0 0; }
+  #lite-agent-panel { width: 100vw; max-width: 100vw; height: 80vh; border-radius: 20px; }
   #lite-agent-head { padding: 12px 14px; gap: 8px; }
   #lite-agent-head input[type=text] { font-size: 14px; padding: 8px 12px; width: 136px; }
   #lite-agent-head button { font-size: 14px; padding: 8px 14px; }
-  #lite-agent-body { padding: 12px 14px; }
+  #lite-agent-body { padding: 12px 14px 20px; }
   .la-pre { font-size: 13.5px; line-height: 1.75; }
   .la-out.la-prose .la-pre { font-size: 16.5px; line-height: 2; }
   .la-card-head { font-size: 12px; }
