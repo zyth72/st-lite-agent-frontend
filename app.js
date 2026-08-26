@@ -119,9 +119,9 @@ const SettingsView = defineComponent({
     }
     async function save() {
       const stages = (cfg.value.stages || []).map((st) => ({ id: st.id, model: st.model, thinking: st.think ? 'enabled' : 'disabled', stream: st.stream, max_tokens: st.max ? Number(st.max) : null }));
-      // key 按 provider 名写入 .env;空 = 删除该行(后端处理)
+      // key 只有用户填了新值才写入 .env;留空 = 保持原样,绝不删除已有 key(防误删)
       const providers = (cfg.value.providers || []).map((p) => ({ name: p.name, baseurl: p.baseurl, models: p.models }));
-      const keys = (cfg.value.providers || []).map((p) => ({ name: p.name, key: p.key }));
+      const keys = (cfg.value.providers || []).filter((p) => p.key).map((p) => ({ name: p.name, key: p.key }));
       try {
         const r = await fetch(S.base.value + '/agent/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stages, providers, keys }) });
         if (!r.ok) throw new Error('HTTP ' + r.status);
