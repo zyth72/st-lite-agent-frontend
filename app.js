@@ -236,11 +236,12 @@ const App = defineComponent({
     function onHeadUp() { panelDrag = null; }
     function onBaseChange() { S.setBase(baseInput.value); }
     function onSettingsBtn() { if (S.view.value === 'settings') S.closeSettings(); else S.openSettings(); }
+    function onStop() { S.stopCurrent(); }
     useEventListener(window, 'pointermove', onBallMove);
     useEventListener(window, 'pointerup', onBallUp);
     useEventListener(window, 'pointermove', onHeadMove);
     useEventListener(window, 'pointerup', onHeadUp);
-    return { baseInput, visible, ballStyle, panelStyle, onBallDown, onBallMove, onBallUp, onHeadDown, onHeadMove, onHeadUp, onBaseChange, onSettingsBtn, panelOpen: S.panelOpen, connected: S.connected, view: S.view, clearBody: S.clearBody };
+    return { baseInput, visible, ballStyle, panelStyle, onBallDown, onBallMove, onBallUp, onHeadDown, onHeadMove, onHeadUp, onBaseChange, onSettingsBtn, onStop, panelOpen: S.panelOpen, connected: S.connected, view: S.view, clearBody: S.clearBody };
   },
   template: `
 <div>
@@ -250,6 +251,7 @@ const App = defineComponent({
       <span class="la-title">st-lite-agent</span>
       <span id="lite-agent-status" :class="connected ? 'ok' : ''"></span>
       <LaInput type="text" id="lite-agent-base" v-model="baseInput" @change="onBaseChange"/>
+      <LaButton text="停止" @click="onStop"/>
       <LaButton text="清空" @click="clearBody"/>
       <LaButton :text="view==='settings' ? '返回' : '⚙️'" @click="onSettingsBtn"/>
     </div>

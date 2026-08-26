@@ -95,6 +95,7 @@ export function css() {
 }
 #lite-agent-head .la-title { color: var(--md-on-surface); font-size: 14px; font-weight: 500; letter-spacing: .2px; }
 #lite-agent-head .la-title::before { content: '⚡'; margin-right: 7px; color: var(--md-primary); }
+#lite-agent-head button.la-stop { color: var(--md-error) !important; }
 #lite-agent-status { width: 8px; height: 8px; border-radius: 50%; background: var(--md-outline-variant); display: inline-block; margin-right: 2px; }
 #lite-agent-status.ok { background: var(--md-ok); box-shadow: 0 0 0 3px rgba(123, 219, 154, 0.14); }
 #lite-agent-status.err { background: var(--md-error); box-shadow: 0 0 0 3px rgba(242, 184, 181, 0.14); }

@@ -65,6 +65,11 @@ export function closeSettings() { view.value = 'stages'; }
 export function clearBody() { resetData(); }
 export function setBase(v) { base.value = v || 'http://127.0.0.1:7890'; connect(); }
 
+/** 面板"停止":中止当前正在进行的 agent 请求(酒馆刷新后手动停用)。 */
+export function stopCurrent() {
+  fetch(base.value + '/agent/stop', { method: 'POST' }).catch(() => {});
+}
+
 /** json 段:正文 原始JSON ↔ 渲染MD(懒加载后端 /agent/render-md)。 */
 export async function toggleMd(id) {
   const sv = stageView[id] || (stageView[id] = { md: null, mode: 'json' });
