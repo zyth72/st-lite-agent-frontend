@@ -1,256 +1,278 @@
 /**
  * 插件样式(style#lite-agent-style)。
- * 视觉基准:深色 Agent 工作流 UI(参考图配色):
- *   页面底 #121318 / 步骤卡片 #2a292f / 嵌套内容 #1f1e24 / 边框 #32313a
- *   正文 #d4d4d9 / 次要 #9a99a2 / 弱化 #6b6a73
+ * 规范:Material 3(M3)暗色主题 token——surface/tonal 分层、状态层、
+ * 大圆角卡片(12dp)、pill 按钮、filled 输入框;primary 采用蓝紫色调,
+ * 观感接近 Miuix/MIUI 的圆润风格。
+ *
  * 球/面板用 position:absolute 而不是 fixed:ST 在 ≤1000px 视口把 body 设为
  * position:fixed,叠加 html 上的 -webkit-transform/-webkit-perspective,html 会
  * 成为 fixed 后代的包含块且高度为 0,right/bottom 定位会被推到视口外。
- * 原生控件(input/button/checkbox/details/滚动条)全部用本文件的规则覆盖,
- * 否则会以浏览器默认样式渲染,与整体风格脱节。
+ * 原生控件(input/button/checkbox/details/滚动条)全部用本文件规则覆盖
+ * (!important 压过 ST 全局主题),否则会以浏览器默认样式渲染。
  */
 export function css() {
   if (document.getElementById('lite-agent-style')) return;
   const s = document.createElement('style');
   s.id = 'lite-agent-style';
-  s.textContent = `/* ===== 设计变量 ===== */
+  s.textContent = `/* ===== M3 设计令牌(暗色/蓝紫 primary) ===== */
 #lite-agent-panel {
-  --la-bg: #121318;
-  --la-card: #1f1e24;
-  --la-card2: #2a292f;
-  --la-inner: #16151b;
-  --la-border: #32313a;
-  --la-border2: #26252c;
-  --la-text: #d4d4d9;
-  --la-dim: #9a99a2;
-  --la-faint: #6b6a73;
-  --la-accent: #8ab4ff;
-  --la-ok: #4ec176;
-  --la-err: #e2635a;
-  --la-run: #e8b564;
+  --md-surface: #141218;
+  --md-surface-lowest: #0f0d13;
+  --md-surface-low: #1d1b20;
+  --md-surface-container: #211f26;
+  --md-surface-high: #2b2930;
+  --md-surface-highest: #36343b;
+  --md-on-surface: #e6e1e5;
+  --md-on-surface-variant: #cac4d0;
+  --md-outline: #938f99;
+  --md-outline-variant: #49454f;
+  --md-primary: #a8c8ff;
+  --md-on-primary: #102f5c;
+  --md-primary-container: #3e4f78;
+  --md-on-primary-container: #d9e3ff;
+  --md-secondary-container: #4a4458;
+  --md-on-secondary-container: #e8def8;
+  --md-error: #f2b8b5;
+  --md-ok: #7bdb9a;
+  --md-run: #f5c77e;
+  --md-state-hover: rgba(230, 225, 229, 0.08);
+  --md-state-focus: rgba(230, 225, 229, 0.12);
+  --md-state-pressed: rgba(230, 225, 229, 0.16);
   position: absolute;
   display: none;
   flex-direction: column;
   z-index: 2147483646;
-  background: rgba(18, 19, 24, 0.97);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--la-border);
-  border-radius: 14px;
-  color: var(--la-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  background: rgba(20, 18, 24, 0.96);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(147, 143, 153, 0.14);
+  border-radius: 28px;
+  color: var(--md-on-surface);
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
 }
 #lite-agent-panel.open { display: flex; }
-#lite-agent-panel ::selection { background: rgba(138, 180, 255, 0.25); }
+#lite-agent-panel ::selection { background: rgba(168, 200, 255, 0.28); }
 
-/* ===== 悬浮球 ===== */
+/* ===== 悬浮球(M3 FAB 变体) ===== */
 #lite-agent-ball {
   position: absolute;
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  background: #17181d;
-  border: 1px solid var(--la-border);
-  color: var(--la-accent);
-  font-size: 19px; line-height: 41px;
+  width: 48px; height: 48px;
+  border-radius: 16px;
+  background: var(--md-surface-high);
+  border: none;
+  color: var(--md-primary);
+  font-size: 21px;
+  line-height: 47px;
   text-align: center;
   cursor: pointer;
   z-index: 2147483647;
   user-select: none;
   touch-action: none;
   transform: translateZ(0);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 10px rgba(138, 180, 255, 0.10);
-  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  transition: background .18s ease, box-shadow .18s ease, transform .18s ease;
 }
-#lite-agent-ball:hover { background: #20222a; border-color: #45454f; transform: translateZ(0) scale(1.06); }
+#lite-agent-ball:hover { background: var(--md-surface-highest); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); transform: translateZ(0) scale(1.05); }
+#lite-agent-ball:active { transform: translateZ(0) scale(0.98); }
 
 /* ===== 面板头 ===== */
 #lite-agent-head {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--la-border2);
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(147, 143, 153, 0.16);
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
   align-items: center;
   cursor: move;
   touch-action: none;
   user-select: none;
 }
-#lite-agent-head .la-title {
-  color: var(--la-text);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: .2px;
-}
-#lite-agent-head .la-title::before { content: '⚡'; margin-right: 6px; color: var(--la-accent); }
-#lite-agent-status { width: 7px; height: 7px; border-radius: 50%; background: #3f3e46; display: inline-block; margin-right: 2px; }
-#lite-agent-status.ok { background: var(--la-ok); box-shadow: 0 0 6px rgba(78, 193, 118, .6); }
-#lite-agent-status.err { background: var(--la-err); box-shadow: 0 0 6px rgba(226, 99, 90, .6); }
+#lite-agent-head .la-title { color: var(--md-on-surface); font-size: 14px; font-weight: 500; letter-spacing: .2px; }
+#lite-agent-head .la-title::before { content: '⚡'; margin-right: 7px; color: var(--md-primary); }
+#lite-agent-status { width: 8px; height: 8px; border-radius: 50%; background: var(--md-outline-variant); display: inline-block; margin-right: 2px; }
+#lite-agent-status.ok { background: var(--md-ok); box-shadow: 0 0 0 3px rgba(123, 219, 154, 0.14); }
+#lite-agent-status.err { background: var(--md-error); box-shadow: 0 0 0 3px rgba(242, 184, 181, 0.14); }
 
-/* ===== 原生控件覆盖(带 !important,压过 ST 全局主题样式) ===== */
+/* ===== 原生控件覆盖(M3 filled / pill,!important 压过 ST 主题) ===== */
 #lite-agent-panel input[type=text],
 #lite-agent-panel input[type=password],
 #lite-agent-panel input[type=number],
 #lite-agent-panel select {
-  background: var(--la-inner) !important;
-  border: 1px solid var(--la-border) !important;
-  color: var(--la-text) !important;
-  border-radius: 8px !important;
-  padding: 5px 9px !important;
-  font-size: 12px !important;
+  background: var(--md-surface-highest) !important;
+  border: 1px solid transparent !important;
+  color: var(--md-on-surface) !important;
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
   font-family: inherit !important;
   outline: none !important;
   box-shadow: none !important;
-  transition: border-color .15s ease, box-shadow .15s ease;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-#lite-agent-panel input::placeholder { color: var(--la-faint) !important; }
+#lite-agent-panel input::placeholder { color: var(--md-outline) !important; }
+#lite-agent-panel input[type=text]:hover,
+#lite-agent-panel input[type=password]:hover,
+#lite-agent-panel input[type=number]:hover,
+#lite-agent-panel select:hover { background: #3b3942 !important; }
 #lite-agent-panel input[type=text]:focus,
 #lite-agent-panel input[type=password]:focus,
 #lite-agent-panel input[type=number]:focus,
 #lite-agent-panel select:focus {
-  border-color: var(--la-accent) !important;
-  box-shadow: 0 0 0 2px rgba(138, 180, 255, .14) !important;
+  background: #3b3942 !important;
+  border-color: var(--md-primary) !important;
+  box-shadow: 0 0 0 1px var(--md-primary) !important;
 }
 #lite-agent-head input[type=text] { width: 150px !important; flex: 0 1 auto; }
 #lite-agent-panel input[type=checkbox] {
-  accent-color: var(--la-accent) !important;
-  width: 14px !important; height: 14px !important; cursor: pointer; margin: 0;
+  accent-color: var(--md-primary) !important;
+  width: 16px !important; height: 16px !important; cursor: pointer; margin: 0;
 }
 #lite-agent-panel input[type=number] { width: 74px !important; }
+
+/* 按钮:M3 text/tonal/filled 三档,统一 pill */
 #lite-agent-panel button {
-  background: #232229 !important;
-  border: 1px solid var(--la-border) !important;
-  color: var(--la-dim) !important;
-  border-radius: 8px !important;
-  padding: 5px 10px !important;
-  font-size: 12px !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--md-primary) !important;
+  border-radius: 20px !important;
+  padding: 7px 14px !important;
+  font-size: 13px !important;
   font-family: inherit !important;
+  font-weight: 500 !important;
   line-height: 1.4 !important;
   cursor: pointer;
   text-shadow: none !important;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  box-shadow: none !important;
+  transition: background .18s ease, color .18s ease;
 }
-#lite-agent-panel button:hover { background: #2b2a31 !important; color: var(--la-text) !important; border-color: #45454f !important; }
-#lite-agent-panel button:active { transform: translateY(1px); }
+#lite-agent-panel button:hover { background: var(--md-state-hover) !important; }
+#lite-agent-panel button:focus-visible { background: var(--md-state-focus) !important; }
+#lite-agent-panel button:active { background: var(--md-state-pressed) !important; }
+#lite-agent-panel #lite-agent-head button { padding: 6px 12px !important; }
+#lite-agent-body button { background: var(--md-primary) !important; color: var(--md-on-primary) !important; }
+#lite-agent-body button:hover { background: #93b6f2 !important; box-shadow: 0 2px 8px rgba(168, 200, 255, 0.2) !important; }
+#lite-agent-body button.la-btn-tonal { background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container) !important; }
+#lite-agent-body button.la-btn-tonal:hover { background: #544e63 !important; }
 
 /* ===== 面板体与滚动条 ===== */
-#lite-agent-body { flex: 1; overflow-y: auto; padding: 10px 12px; }
+#lite-agent-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
 #lite-agent-body::-webkit-scrollbar { width: 8px; height: 8px; }
-#lite-agent-body::-webkit-scrollbar-thumb { background: #30303a; border-radius: 4px; }
-#lite-agent-body::-webkit-scrollbar-thumb:hover { background: #3c3c48; }
+#lite-agent-body::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 4px; }
+#lite-agent-body::-webkit-scrollbar-thumb:hover { background: #565266; }
 #lite-agent-body::-webkit-scrollbar-track { background: transparent; }
 
-/* ===== 步骤卡片 ===== */
+/* ===== 步骤卡片(M3 filled card,圆角 12dp,无描边) ===== */
 .la-group {
-  background: var(--la-card);
-  border: 1px solid var(--la-border2);
-  border-radius: 12px;
-  padding: 9px 12px 11px;
+  background: var(--md-surface-high);
+  border: none;
+  border-radius: 16px;
+  padding: 12px 14px 14px;
   margin-bottom: 10px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
 }
-.la-step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
-.la-step-title { font-size: 13px; font-weight: 600; color: var(--la-text); }
-.la-step-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--la-faint); flex: none; }
-.la-step-dot.running { background: var(--la-run); box-shadow: 0 0 6px rgba(232, 181, 100, .55); }
-.la-step-dot.done { background: var(--la-ok); box-shadow: 0 0 6px rgba(78, 193, 118, .5); }
-.la-step-dot.failed { background: var(--la-err); box-shadow: 0 0 6px rgba(226, 99, 90, .5); }
+.la-step-head { display: flex; align-items: center; gap: 9px; margin-bottom: 2px; }
+.la-step-title { font-size: 13.5px; font-weight: 600; color: var(--md-on-surface); }
+.la-step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--md-outline-variant); flex: none; }
+.la-step-dot.running { background: var(--md-run); box-shadow: 0 0 0 3px rgba(245, 199, 126, 0.14); }
+.la-step-dot.done { background: var(--md-ok); box-shadow: 0 0 0 3px rgba(123, 219, 154, 0.14); }
+.la-step-dot.failed { background: var(--md-error); box-shadow: 0 0 0 3px rgba(242, 184, 181, 0.14); }
 
-/* ===== 折叠区(details/summary 原生化覆盖) ===== */
-.la-group details { margin-top: 7px; }
+/* ===== 折叠区(M3 化 details/summary) ===== */
+.la-group details { margin-top: 6px; }
 .la-group details[open] { margin-bottom: 2px; }
 .la-group summary {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  margin: 0 -4px;
-  border-radius: 8px;
-  font-size: 12px;
+  gap: 9px;
+  padding: 7px 10px;
+  margin: 0 -2px;
+  border-radius: 12px;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--la-dim);
+  color: var(--md-on-surface-variant);
   cursor: pointer;
   user-select: none;
   list-style: none;
-  transition: background .15s ease, color .15s ease;
+  transition: background .18s ease, color .18s ease;
 }
 .la-group summary::-webkit-details-marker { display: none; }
-.la-group summary:hover { background: rgba(255, 255, 255, 0.03); color: var(--la-text); }
+.la-group summary:hover { background: var(--md-state-hover); color: var(--md-on-surface); }
 .la-group summary::after {
   content: '';
   margin-left: auto;
-  width: 7px; height: 7px;
-  border-right: 1.6px solid var(--la-faint);
-  border-bottom: 1.6px solid var(--la-faint);
+  width: 8px; height: 8px;
+  border-right: 1.8px solid var(--md-outline);
+  border-bottom: 1.8px solid var(--md-outline);
   transform: rotate(45deg);
-  transition: transform .18s ease;
+  transition: transform .2s ease;
 }
 .la-group details[open] > summary::after { transform: rotate(-135deg); }
 
-/* ===== 内容块 ===== */
+/* ===== 内容块(嵌套 lower 层级) ===== */
 .la-reason-body, .la-card {
-  background: var(--la-inner);
-  border: 1px solid var(--la-border2);
-  border-radius: 9px;
-  padding: 8px 10px;
+  background: var(--md-surface-lowest);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 12px;
   margin-top: 5px;
 }
 .la-pre {
   margin: 0;
-  padding: 8px 10px;
+  padding: 6px 8px;
   background: transparent;
   border: none;
   border-radius: 0;
   font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, 'Noto Sans Mono CJK SC', monospace;
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-all;
   max-height: 32vh;
   overflow-y: auto;
-  color: #c4c4cb;
+  color: var(--md-on-surface-variant);
 }
 .la-pre::-webkit-scrollbar { width: 6px; }
-.la-pre::-webkit-scrollbar-thumb { background: #2d2c34; border-radius: 3px; }
-.la-pre blockquote { margin: 0; padding: 2px 0 2px 10px; border-left: 3px solid rgba(138, 180, 255, 0.28); color: var(--la-dim); }
+.la-pre::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 3px; }
+.la-pre blockquote { margin: 0; padding: 2px 0 2px 10px; border-left: 3px solid rgba(168, 200, 255, 0.3); color: var(--md-on-surface-variant); }
 
-/* 写作正文:小说排版(衬线 + 更大行距) */
-.la-out.la-prose .la-pre { font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif; font-size: 15px; line-height: 1.95; color: #dedee2; }
+/* 写作正文:小说排版(衬线 + 大行距) */
+.la-out.la-prose .la-pre { font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif; font-size: 15.5px; line-height: 1.95; color: var(--md-on-surface); }
 
-.la-card-head { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; color: var(--la-faint); font-size: 11px; }
+.la-card-head { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; color: var(--md-outline); font-size: 11px; }
 .la-card-head span { letter-spacing: .06em; }
-.la-copy {
+#lite-agent-body button.la-copy {
   margin-left: auto;
-  background: transparent;
-  border: 1px solid var(--la-border);
-  color: var(--la-dim);
-  border-radius: 6px;
-  font-size: 11px;
-  padding: 1px 8px;
+  background: transparent !important;
+  border: 1px solid var(--md-outline-variant) !important;
+  color: var(--md-on-surface-variant) !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
+  padding: 2px 10px !important;
   cursor: pointer;
-  transition: background .15s ease, color .15s ease;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
 }
-.la-copy:hover { background: #26252d; color: var(--la-text); border-color: #45454f; }
+#lite-agent-body button.la-copy:hover { background: var(--md-state-hover) !important; color: var(--md-on-surface) !important; border-color: var(--md-outline) !important; }
 
 /* ===== 设置面板组件 ===== */
-.la-dim { color: var(--la-faint); font-size: 12px; padding: 10px; }
+.la-dim { color: var(--md-outline); font-size: 12px; padding: 12px; }
 
 /* markdown 渲染的标题/代码 */
-.md-h1, .md-h2, .md-h { color: var(--la-accent); font-weight: 600; margin: 6px 0 2px; }
-.md-code { color: #a9c7ff; background: rgba(255, 255, 255, 0.05); padding: 0 4px; border-radius: 3px; }
+.md-h1, .md-h2, .md-h { color: var(--md-primary); font-weight: 600; margin: 6px 0 2px; }
+.md-code { color: #bcd3ff; background: var(--md-state-hover); padding: 0 4px; border-radius: 5px; }
 
 /* ===== 移动端 ===== */
 @media (max-width: 768px) {
-  #lite-agent-ball { width: 52px; height: 52px; font-size: 23px; line-height: 49px; }
-  #lite-agent-panel { width: 100vw; max-width: 100vw; height: 82vh; border-radius: 14px 14px 0 0; }
-  #lite-agent-head { padding: 11px 13px; gap: 8px; }
-  #lite-agent-head input[type=text] { font-size: 14px; padding: 6px 10px; width: 130px; }
-  #lite-agent-head button { font-size: 13px; padding: 6px 10px; }
-  #lite-agent-body { padding: 10px 12px; }
-  .la-pre { font-size: 13px; line-height: 1.7; }
-  .la-out.la-prose .la-pre { font-size: 16px; line-height: 2; }
+  #lite-agent-ball { width: 54px; height: 54px; font-size: 24px; line-height: 53px; border-radius: 18px; }
+  #lite-agent-panel { width: 100vw; max-width: 100vw; height: 84vh; border-radius: 24px 24px 0 0; }
+  #lite-agent-head { padding: 12px 14px; gap: 8px; }
+  #lite-agent-head input[type=text] { font-size: 14px; padding: 8px 12px; width: 136px; }
+  #lite-agent-head button { font-size: 14px; padding: 8px 14px; }
+  #lite-agent-body { padding: 12px 14px; }
+  .la-pre { font-size: 13.5px; line-height: 1.75; }
+  .la-out.la-prose .la-pre { font-size: 16.5px; line-height: 2; }
   .la-card-head { font-size: 12px; }
-  .la-group summary { font-size: 13px; padding: 6px 8px; }
+  .la-group summary { font-size: 14px; padding: 8px 10px; }
   .la-copy { font-size: 12px; padding: 3px 12px; }
 }
 `;

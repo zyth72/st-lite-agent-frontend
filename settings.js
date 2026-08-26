@@ -76,7 +76,7 @@ function renderSettings() {
   });
 
   const saveBtn = h('button', { text: '保存', onclick: () => saveSettings(currentBase) });
-  const backBtn = h('button', { text: '返回', onclick: () => toggleSettings(currentBase) });
+  const backBtn = h('button', { text: '返回', class: 'la-btn-tonal', onclick: () => toggleSettings(currentBase) });
   L.push(h('div', { style: 'display:flex;gap:8px;margin-top:10px' }, [saveBtn, backBtn]));
 
   bodyEl.appendChild(h('div', { style: 'display:flex;flex-direction:column;gap:2px' }, L));
