@@ -91,6 +91,11 @@ const SettingsView = defineComponent({
     function addProvider() { cfg.value.providers.push({ name: '', baseurl: '', models: [], keyHint: '', key: '', _new: '' }); }
     function removeProvider(i) { cfg.value.providers.splice(i, 1); }
     async function loadModels(p) {
+      // 密钥为空且 .env 也没配置时,直接提示,避免"没反应/401"
+      if (!p.key && !p.keyHint) {
+        tip.value = '请先在密钥框填入该上游的 API Key(或在 .env 配置 ' + p.name + '=密钥),再点加载模型';
+        return;
+      }
       try {
         const r = await fetch(S.base.value + '/agent/config/load-models', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.name, baseurl: p.baseurl, key: p.key }) });
         if (!r.ok) {
