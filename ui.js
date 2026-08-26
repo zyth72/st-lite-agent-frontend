@@ -64,7 +64,7 @@ export function buildPanel({ pos, base, onBaseChange, onToggleSettings }) {
   const settingsBtn = h('button', { text: '⚙️', title: '设置', onclick: () => onToggleSettings() });
   const bodyEl = h('div', { id: 'lite-agent-body' });
   const head = h('div', { id: 'lite-agent-head' }, [
-    h('span', { text: '⚡ st-lite-agent', style: 'color:#00f0ff;font-weight:bold' }),
+    h('span', { class: 'la-title', text: 'st-lite-agent' }),
     status, baseInput, clearBtn, settingsBtn,
   ]);
   if (window.innerWidth <= 768) { pos.right = 0; pos.bottom = 0; }

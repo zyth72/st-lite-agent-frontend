@@ -44,26 +44,28 @@ export function renderGroups(stages) {
     return;
   }
   stages.forEach((st) => {
+    const isWriter = st.id === 'writer';
+    const head = h('div', { class: 'la-step-head' }, [
+      h('span', { class: 'la-step-dot', id: 'la-dot-' + st.id }),
+      h('span', { class: 'la-step-title', id: 'la-label-' + st.id, text: st.id }),
+    ]);
     const reasonPre = h('pre', { class: 'la-pre', id: 'la-reason-' + st.id });
     reasonPre._raw = '';
-    const det = h('details', { class: 'la-reason' });
-    det.appendChild(h('summary', { text: '🧠 思维链 - ' + st.id }));
-    det.appendChild(h('div', { class: 'la-reason-body' }, [reasonPre]));
+    const reasonDet = h('details', { class: 'la-reason' });
+    reasonDet.appendChild(h('summary', { text: '思维链' }));
+    reasonDet.appendChild(h('div', { class: 'la-reason-body' }, [reasonPre]));
     const outPre = h('pre', { class: 'la-pre', id: 'la-out-' + st.id });
     outPre._raw = '';
     const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
       if (outPre) navigator.clipboard && navigator.clipboard.writeText(outPre._raw || '');
     } });
-    const outDet = h('details', { class: 'la-out', open: 'open' });
-    outDet.appendChild(h('summary', { text: '🖥️ 正文 - ' + st.id }));
+    const outDet = h('details', { class: isWriter ? 'la-out la-prose' : 'la-out', open: 'open' });
+    outDet.appendChild(h('summary', { text: '正文' }));
     outDet.appendChild(h('div', { class: 'la-card' }, [
       h('div', { class: 'la-card-head' }, [h('span', { text: '正文' }), copyBtn]),
       outPre,
     ]));
-    bodyEl.appendChild(h('div', { class: 'la-group', id: 'la-group-' + st.id }, [
-      h('div', { class: 'la-group-label', id: 'la-label-' + st.id, text: st.id }),
-      det, outDet,
-    ]));
+    bodyEl.appendChild(h('div', { class: 'la-group', id: 'la-group-' + st.id }, [head, reasonDet, outDet]));
   });
 }
 
@@ -84,15 +86,11 @@ export function appendText(stage, kind, text) {
 
 export function setStageStatus(stageId, status) {
   const label = document.getElementById('la-label-' + stageId);
-  if (!label) return;
-  const map = {
-    running: { icon: '⏳', color: '#00f0ff' },
-    done: { icon: '✅', color: '#2ecc71' },
-    failed: { icon: '❌', color: '#e74c3c' },
-  };
-  const st = map[status];
-  if (st) {
-    label.textContent = st.icon + ' ' + stageId;
-    label.style.color = st.color;
+  const dot = document.getElementById('la-dot-' + stageId);
+  if (dot) dot.className = 'la-step-dot ' + status;
+  if (label) {
+    const icons = { running: '⏳', done: '✅', failed: '❌' };
+    label.textContent = (icons[status] ? icons[status] + ' ' : '') + stageId;
+    label.style.color = '';
   }
 }
