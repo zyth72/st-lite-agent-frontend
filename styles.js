@@ -276,8 +276,28 @@ export function css() {
 }
 #lite-agent-body button.la-md-toggle:hover { background: rgba(168, 200, 255, 0.22) !important; border-color: var(--md-primary) !important; }
 
-/* ===== 设置面板组件 ===== */
+/* ===== 设置面板组件(M3 分组卡片) ===== */
 .la-dim { color: var(--md-outline); font-size: 12px; padding: 12px; }
+.la-settings { display: flex; flex-direction: column; gap: 12px; }
+.la-set-group { background: var(--md-surface-high); border-radius: 16px; padding: 12px 14px; }
+.la-set-group-title { font-size: 13px; font-weight: 600; color: var(--md-on-surface); }
+.la-set-hint { font-size: 11px; color: var(--md-outline); margin: 2px 0 8px; }
+.la-set-empty { color: var(--md-outline); font-size: 12px; padding: 6px 0; }
+.la-set-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; }
+.la-set-row + .la-set-row { border-top: 1px solid rgba(147, 143, 153, 0.10); }
+.la-set-label { flex: 0 0 88px; color: var(--md-on-surface-variant); font-size: 12px; }
+.la-set-input { flex: 1; min-width: 0; width: auto !important; }
+.la-set-stage { display: flex; align-items: center; gap: 8px; padding: 7px 0; }
+.la-set-stage-name { flex: 0 0 88px; color: var(--md-on-surface); font-weight: 600; font-size: 12.5px; }
+.la-set-toggle { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; padding: 4px 0 8px; }
+.la-set-toggle-item { display: flex; align-items: center; gap: 6px; color: var(--md-on-surface-variant); font-size: 12px; cursor: pointer; user-select: none; }
+.la-set-max { width: 74px !important; }
+.la-set-actions { display: flex; gap: 10px; margin-top: 4px; }
+.la-set-actions button { flex: 1; }
+@media (max-width: 768px) {
+  .la-set-label, .la-set-stage-name { flex-basis: 76px; }
+  .la-set-toggle { gap: 4px; }
+}
 
 /* markdown 渲染的标题/代码 */
 .md-h1, .md-h2, .md-h { color: var(--md-primary); font-weight: 600; margin: 6px 0 2px; }

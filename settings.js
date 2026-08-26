@@ -47,9 +47,25 @@ async function loadSettings(base) {
   renderSettings();
 }
 
-function sRow(id, label, node) {
-  return h('div', { style: 'display:flex;align-items:center;gap:6px;margin:3px 0;font-size:12px;flex-wrap:wrap' }, [
-    h('span', { text: label, style: 'min-width:72px;color:#9bb8d0' }), node,
+function sRow(label, node) {
+  return h('div', { class: 'la-set-row' }, [
+    h('span', { class: 'la-set-label', text: label }), node,
+  ]);
+}
+
+function toggleItem(id, label, checked) {
+  return h('label', { class: 'la-set-toggle-item' }, [
+    h('input', { type: 'checkbox', id: id, checked: checked ? 'checked' : null }),
+    h('span', { text: label }),
+  ]);
+}
+
+function group(title, hint, rows) {
+  const rowsArr = rows.length ? rows : [h('div', { class: 'la-set-empty', text: '(无)' })];
+  return h('div', { class: 'la-set-group' }, [
+    h('div', { class: 'la-set-group-title', text: title }),
+    hint ? h('div', { class: 'la-set-hint', text: hint }) : null,
+    ...rowsArr,
   ]);
 }
 
@@ -60,38 +76,40 @@ function renderSettings() {
   const d = cfgData || { stages: [], providers: [], keys: [] };
   const L = [];
 
-  L.push(h('div', { class: 'la-dim', text: '上游密钥(key 留空 = 删除该行)' }));
-  (d.keys || []).forEach((k, i) => {
-    L.push(sRow('k' + i, k.name, h('input', { type: 'password', id: 'cfg-key-' + i, placeholder: '···' + k.hint, style: 'flex:1;min-width:120px' })));
-  });
+  const keyRows = (d.keys || []).map((k, i) =>
+    sRow(k.name, h('input', { type: 'password', id: 'cfg-key-' + i, placeholder: '···' + k.hint, class: 'la-set-input' })));
+  L.push(group('上游密钥', 'key 留空 = 删除该行', keyRows));
 
-  L.push(h('div', { class: 'la-dim', text: '上游(models 逗号分隔,留空=自动发现)' }));
+  const provRows = [];
   (d.providers || []).forEach((p, i) => {
-    L.push(sRow('p' + i, p.name, h('input', { type: 'text', id: 'cfg-purl-' + i, value: p.baseurl, style: 'flex:1;min-width:150px', title: 'baseurl' })));
-    L.push(sRow('p' + i + 'm', p.name + ' models', h('input', { type: 'text', id: 'cfg-pmodels-' + i, value: (p.models || []).join(', '), style: 'flex:1;min-width:150px' })));
+    provRows.push(sRow(p.name, h('input', { type: 'text', id: 'cfg-purl-' + i, value: p.baseurl, class: 'la-set-input', title: 'baseurl' })));
+    provRows.push(sRow(p.name + ' models', h('input', { type: 'text', id: 'cfg-pmodels-' + i, value: (p.models || []).join(', '), class: 'la-set-input' })));
   });
+  L.push(group('上游', 'models 逗号分隔,留空 = 自动发现', provRows));
 
-  L.push(h('div', { class: 'la-dim', text: 'agent 段配置(模型 / thinking / 流式 / max_tokens)' }));
+  const stageRows = [];
   (d.stages || []).forEach((st, i) => {
     if (st.type !== 'llm') return;
-    const model = h('input', { type: 'text', id: 'cfg-model-' + i, value: st.model || '', placeholder: '(继承外层)', style: 'flex:1;min-width:120px;font-size:12px' });
-    const think = h('input', { type: 'checkbox', id: 'cfg-think-' + i, checked: st.thinking === 'enabled' ? 'checked' : null });
-    const stream = h('input', { type: 'checkbox', id: 'cfg-stream-' + i, checked: st.stream ? 'checked' : null });
-    const max = h('input', { type: 'number', id: 'cfg-max-' + i, value: st.max_tokens || '', style: 'width:74px;font-size:12px' });
-    const row1 = sRow('s' + i, st.id, model);
-    const row2 = sRow('s' + i + 'a', 'thinking', think);
-    row2.appendChild(h('span', { text: 'stream', style: 'color:#5f7488;margin-left:12px' }));
-    row2.appendChild(stream);
-    row2.appendChild(h('span', { text: 'max', style: 'color:#5f7488;margin-left:12px' }));
-    row2.appendChild(max);
-    L.push(row1, row2);
+    stageRows.push(h('div', { class: 'la-set-stage' }, [
+      h('span', { class: 'la-set-stage-name', text: st.id }),
+      h('input', { type: 'text', id: 'cfg-model-' + i, value: st.model || '', placeholder: '(继承外层)', class: 'la-set-input' }),
+    ]));
+    stageRows.push(h('div', { class: 'la-set-toggle' }, [
+      toggleItem('cfg-think-' + i, 'thinking', st.thinking === 'enabled'),
+      toggleItem('cfg-stream-' + i, 'stream', !!st.stream),
+      h('label', { class: 'la-set-toggle-item' }, [
+        h('span', { text: 'max' }),
+        h('input', { type: 'number', id: 'cfg-max-' + i, value: st.max_tokens || '', class: 'la-set-max' }),
+      ]),
+    ]));
   });
+  L.push(group('agent 段配置', '模型 / thinking / 流式 / max_tokens', stageRows));
 
   const saveBtn = h('button', { text: '保存', onclick: () => saveSettings(currentBase) });
   const backBtn = h('button', { text: '返回', class: 'la-btn-tonal', onclick: () => toggleSettings(currentBase) });
-  L.push(h('div', { style: 'display:flex;gap:8px;margin-top:10px' }, [saveBtn, backBtn]));
+  L.push(h('div', { class: 'la-set-actions' }, [saveBtn, backBtn]));
 
-  bodyEl.appendChild(h('div', { style: 'display:flex;flex-direction:column;gap:2px' }, L));
+  bodyEl.appendChild(h('div', { class: 'la-settings' }, L));
 }
 
 async function saveSettings(base) {
