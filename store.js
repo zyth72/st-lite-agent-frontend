@@ -1,7 +1,7 @@
 /**
  * 响应式状态 + SSE 连接。Vue 组件只读状态/调 action,不直接碰 SSE。
  */
-import { ref, reactive } from './vue.esm-browser.prod.js';
+import { ref, reactive } from './lib/vue.esm-browser.prod.js';
 import { useLocalStorage } from './hooks.js';
 
 export const base = useLocalStorage('st-lite-agent-base', 'http://127.0.0.1:7890');

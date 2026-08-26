@@ -1,9 +1,10 @@
 /**
  * Vue 面板根组件 + 子组件(StageCard / SettingsView)。
- * 状态全部来自 store.js;样式复用现有 M3 class;marked 渲染正文/思维链。
+ * 状态来自 store.js;基础控件用全局组件 LaInput/LaSelect/LaToggleItem/LaButton;
+ * 样式复用现有 M3 class;marked 渲染正文/思维链。
  */
-import { defineComponent, ref, computed, watch } from './vue.esm-browser.prod.js';
-import { marked } from './marked.esm.js';
+import { defineComponent, ref, computed } from './lib/vue.esm-browser.prod.js';
+import { marked } from './lib/marked.esm.js';
 import { useEventListener } from './hooks.js';
 import * as S from './store.js';
 
@@ -28,14 +29,11 @@ const StageCard = defineComponent({
     const reasonHtml = computed(() => md(text.value.reasoning));
     const outHtml = computed(() => {
       if (isJson.value && sv.value.mode === 'md') return md(sv.value.md || '');
-      if (isJson.value) return esc(text.value.output);           // 原始 JSON 直显
+      if (isJson.value) return esc(text.value.output);
       return md(text.value.output);
     });
-    const copy = (kind) => {
-      const v = kind === 'reasoning' ? text.value.reasoning : text.value.output;
-      navigator.clipboard && navigator.clipboard.writeText(v);
-    };
-    return { stage, text, sv, status, icon, isJson, reasonHtml, outHtml, copy, toggleMd: (id) => S.toggleMd(id) };
+    const copy = (kind) => { const v = kind === 'reasoning' ? text.value.reasoning : text.value.output; navigator.clipboard && navigator.clipboard.writeText(v); };
+    return { stage, text, sv, status, icon, isJson, reasonHtml, outHtml, copy, toggleMd: S.toggleMd };
   },
   template: `
 <div class="la-group" :id="'la-group-'+stage.id" :class="{closed: sv.collapsed}">
@@ -53,8 +51,8 @@ const StageCard = defineComponent({
       <div class="la-card">
         <div class="la-card-head">
           <span>正文</span>
-          <button v-if="isJson" class="la-md-toggle" @click="toggleMd(stage.id)">{{ sv.mode==='json' ? 'MD' : 'JSON' }}</button>
-          <button class="la-copy" @click="copy('output')">复制</button>
+          <LaButton v-if="isJson" class="la-md-toggle" :text="sv.mode==='json' ? 'MD' : 'JSON'" @click="toggleMd(stage.id)"/>
+          <LaButton class="la-copy" text="复制" @click="copy('output')"/>
         </div>
         <pre class="la-pre" :id="'la-out-'+stage.id" v-html="outHtml"></pre>
       </div>
@@ -72,18 +70,12 @@ const SettingsView = defineComponent({
       return {
         keys: (d.keys || []).map((k) => ({ name: k.name, hint: k.hint, key: '' })),
         providers: (d.providers || []).map((p) => ({ name: p.name, baseurl: p.baseurl, models: p.models || [], _new: '' })),
-        stages: (d.stages || []).filter((s) => s.type === 'llm').map((st) => ({
-          id: st.id, model: st.model || '', think: st.thinking === 'enabled', stream: !!st.stream, max: st.max_tokens || null,
-        })),
+        stages: (d.stages || []).filter((s) => s.type === 'llm').map((st) => ({ id: st.id, model: st.model || '', think: st.thinking === 'enabled', stream: !!st.stream, max: st.max_tokens || null })),
       };
     }
     async function load() {
-      try {
-        const r = await fetch(S.base.value + '/agent/config');
-        const d = await r.json();
-        cfg.value = toEditable(d);
-        tip.value = '';
-      } catch (e) { tip.value = '读取配置失败: ' + e.message; }
+      try { const r = await fetch(S.base.value + '/agent/config'); const d = await r.json(); cfg.value = toEditable(d); tip.value = ''; }
+      catch (e) { tip.value = '读取配置失败: ' + e.message; }
     }
     load();
     const modelOptions = computed(() => {
@@ -94,13 +86,11 @@ const SettingsView = defineComponent({
     });
     function addModel(p) { const v = (p._new || '').trim(); if (v && !p.models.includes(v)) { p.models.push(v); p._new = ''; } }
     async function save() {
-      const stages = (cfg.value.stages || []).map((st) => ({ id: st.id, model: st.model, thinking: st.think ? 'enabled' : 'disabled', stream: st.stream, max_tokens: st.max || null }));
+      const stages = (cfg.value.stages || []).map((st) => ({ id: st.id, model: st.model, thinking: st.think ? 'enabled' : 'disabled', stream: st.stream, max_tokens: st.max ? Number(st.max) : null }));
       const providers = (cfg.value.providers || []).map((p) => ({ name: p.name, baseurl: p.baseurl, models: p.models }));
       const keys = (cfg.value.keys || []).map((k) => ({ name: k.name, key: k.key }));
       try {
-        const r = await fetch(S.base.value + '/agent/config', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stages, providers, keys }),
-        });
+        const r = await fetch(S.base.value + '/agent/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stages, providers, keys }) });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         tip.value = '已保存并热生效(上游/段配置即读即用)';
         await load();
@@ -115,7 +105,7 @@ const SettingsView = defineComponent({
     <div class="la-set-hint">key 留空 = 删除该行</div>
     <div v-for="(k,i) in cfg.keys" :key="i" class="la-set-row">
       <span class="la-set-label">{{k.name}}</span>
-      <input class="la-set-input" type="password" v-model="k.key" :placeholder="'···'+(k.hint||'')">
+      <LaInput class="la-set-input" type="password" v-model="k.key" :placeholder="'···'+(k.hint||'')"/>
     </div>
   </div>
   <div class="la-set-group">
@@ -124,19 +114,19 @@ const SettingsView = defineComponent({
     <div v-for="(p,i) in cfg.providers" :key="i" class="la-provider">
       <div class="la-set-row">
         <span class="la-set-label">{{p.name}}</span>
-        <input class="la-set-input" v-model="p.baseurl">
+        <LaInput class="la-set-input" v-model="p.baseurl"/>
       </div>
       <details class="la-models">
         <summary>模型管理({{ (p.models||[]).length }})</summary>
         <div class="la-model-list">
           <div v-for="(m,j) in p.models" :key="j" class="la-model-row">
             <span class="la-model-name">{{m}}</span>
-            <button class="la-model-del" @click="p.models.splice(j,1)">删</button>
+            <LaButton class="la-model-del" text="删" @click="p.models.splice(j,1)"/>
           </div>
           <div v-if="!(p.models||[]).length" class="la-set-empty">(暂无模型,留空 = 自动发现)</div>
           <div class="la-model-add-row">
-            <input class="la-set-input" v-model="p._new" placeholder="模型名,如 deepseek-v4-pro" @keyup.enter="addModel(p)">
-            <button class="la-model-add" @click="addModel(p)">添加</button>
+            <LaInput class="la-set-input" v-model="p._new" placeholder="模型名,如 deepseek-v4-pro" @keyup.enter="addModel(p)"/>
+            <LaButton class="la-model-add" text="添加" @click="addModel(p)"/>
           </div>
         </div>
       </details>
@@ -148,22 +138,19 @@ const SettingsView = defineComponent({
     <template v-for="(st,i) in cfg.stages" :key="st.id">
       <div class="la-set-stage">
         <span class="la-set-stage-name">{{st.id}}</span>
-        <select class="la-set-input" v-model="st.model">
-          <option value="">(继承外层)</option>
-          <option v-for="opt in modelOptions" :value="opt" :key="opt">{{opt}}</option>
-        </select>
+        <LaSelect class="la-set-input" v-model="st.model" :options="modelOptions"/>
       </div>
       <div class="la-set-toggle">
-        <label class="la-set-toggle-item"><input type="checkbox" v-model="st.think"><span>thinking</span></label>
-        <label class="la-set-toggle-item"><input type="checkbox" v-model="st.stream"><span>stream</span></label>
-        <label class="la-set-toggle-item"><span>max</span><input class="la-set-max" type="number" v-model="st.max"></label>
+        <LaToggleItem v-model="st.think" label="thinking"/>
+        <LaToggleItem v-model="st.stream" label="stream"/>
+        <label class="la-set-toggle-item"><span>max</span><LaInput class="la-set-max" type="number" v-model="st.max"/></label>
       </div>
     </template>
   </div>
   <div v-if="tip" class="la-set-hint">{{tip}}</div>
   <div class="la-set-actions">
-    <button @click="save">保存</button>
-    <button class="la-btn-tonal" @click="back">返回</button>
+    <LaButton text="保存" @click="save"/>
+    <LaButton class="la-btn-tonal" text="返回" @click="back"/>
   </div>
 </div>
 `
@@ -183,9 +170,8 @@ const App = defineComponent({
       const dx = e.clientX - ballDrag.sx, dy = e.clientY - ballDrag.sy;
       if (Math.abs(dx) + Math.abs(dy) > 8) {
         ballDrag.moved = true;
-        const vw = innerWidth, vh = innerHeight;
-        S.ballPos.value.right = Math.min(Math.max(0, ballDrag.sr - dx), Math.max(0, vw - 54 - 8));
-        S.ballPos.value.bottom = Math.min(Math.max(0, ballDrag.sb - dy), Math.max(0, vh - 54 - 8));
+        S.ballPos.value.right = Math.min(Math.max(0, ballDrag.sr - dx), Math.max(0, innerWidth - 54 - 8));
+        S.ballPos.value.bottom = Math.min(Math.max(0, ballDrag.sb - dy), Math.max(0, innerHeight - 54 - 8));
       }
     }
     function onBallUp() { if (ballDrag) { if (!ballDrag.moved) S.togglePanel(); ballDrag = null; } }
@@ -217,9 +203,9 @@ const App = defineComponent({
     <div id="lite-agent-head" @pointerdown="onHeadDown">
       <span class="la-title">st-lite-agent</span>
       <span id="lite-agent-status" :class="connected ? 'ok' : ''"></span>
-      <input type="text" id="lite-agent-base" v-model="baseInput" @change="onBaseChange">
-      <button @click="clearBody">清空</button>
-      <button @click="onSettingsBtn">{{ view==='settings' ? '返回' : '⚙️' }}</button>
+      <LaInput type="text" id="lite-agent-base" v-model="baseInput" @change="onBaseChange"/>
+      <LaButton text="清空" @click="clearBody"/>
+      <LaButton :text="view==='settings' ? '返回' : '⚙️'" @click="onSettingsBtn"/>
     </div>
     <div id="lite-agent-body">
       <SettingsView v-if="view==='settings'"/>

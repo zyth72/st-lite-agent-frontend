@@ -1,7 +1,7 @@
 /**
  * VueUse 同名小实现(无构建、零额外依赖;API 与 @vueuse/core 一致,以后可无缝替换)。
  */
-import { ref, watch, onMounted, onUnmounted } from './vue.esm-browser.prod.js';
+import { ref, watch, onMounted, onUnmounted } from './lib/vue.esm-browser.prod.js';
 
 export function useLocalStorage(key, def) {
   let init = def;
