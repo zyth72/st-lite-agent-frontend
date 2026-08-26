@@ -316,6 +316,9 @@ export function css() {
 #lite-agent-body button.la-model-del:hover { background: var(--md-state-hover) !important; border-color: var(--md-error) !important; }
 .la-model-add-row { display: flex; gap: 8px; padding: 6px 8px 2px; }
 .la-model-add-row input { flex: 1; min-width: 0; }
+.la-model-tools { display: flex; align-items: center; gap: 8px; padding: 4px 0 0; }
+#lite-agent-body button.la-model-load { background: var(--md-secondary-container) !important; border: none !important; color: var(--md-on-secondary-container) !important; border-radius: 8px !important; font-size: 12px !important; padding: 4px 12px !important; }
+#lite-agent-body button.la-model-load:hover { background: #544e63 !important; }
 .la-provider-actions { display: flex; justify-content: flex-end; padding: 2px 0; }
 #lite-agent-body button.la-set-danger { background: transparent !important; border: none !important; color: var(--md-error) !important; font-size: 12px !important; padding: 4px 10px !important; }
 #lite-agent-body button.la-set-danger:hover { background: var(--md-state-hover) !important; }

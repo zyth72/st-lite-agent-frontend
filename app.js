@@ -90,6 +90,15 @@ const SettingsView = defineComponent({
     function addModel(p) { const v = (p._new || '').trim(); if (v && !p.models.includes(v)) { p.models.push(v); p._new = ''; } }
     function addProvider() { cfg.value.providers.push({ name: '', baseurl: '', models: [], keyHint: '', key: '', _new: '' }); }
     function removeProvider(i) { cfg.value.providers.splice(i, 1); }
+    async function loadModels(p) {
+      try {
+        const r = await fetch(S.base.value + '/agent/config/load-models', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.name, baseurl: p.baseurl, key: p.key }) });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        p.models = j.models || [];
+        tip.value = '已加载 ' + p.models.length + ' 个模型';
+      } catch (e) { tip.value = '加载模型失败: ' + e.message; }
+    }
     async function save() {
       const stages = (cfg.value.stages || []).map((st) => ({ id: st.id, model: st.model, thinking: st.think ? 'enabled' : 'disabled', stream: st.stream, max_tokens: st.max ? Number(st.max) : null }));
       // key 按 provider 名写入 .env;空 = 删除该行(后端处理)
@@ -102,7 +111,7 @@ const SettingsView = defineComponent({
         await load();
       } catch (e) { tip.value = '保存失败: ' + e.message; }
     }
-    return { cfg, tip, modelOptions, addModel, addProvider, removeProvider, save, back: S.closeSettings };
+    return { cfg, tip, modelOptions, addModel, addProvider, removeProvider, loadModels, save, back: S.closeSettings };
   },
   template: `
 <div class="la-settings">
@@ -136,6 +145,10 @@ const SettingsView = defineComponent({
           </div>
         </div>
       </details>
+      <div class="la-model-tools">
+        <LaButton class="la-model-load" text="加载模型" @click="loadModels(p)"/>
+        <span class="la-set-hint">从上游 /models 拉取并覆盖模型列表</span>
+      </div>
       <div class="la-provider-actions">
         <LaButton class="la-set-danger" text="删除该上游" @click="removeProvider(i)"/>
       </div>
