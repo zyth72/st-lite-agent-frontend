@@ -251,7 +251,6 @@ export function css() {
 
 /* 写作正文:小说排版(衬线 + 大行距) */
 .la-out.la-prose .la-pre { font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif; font-size: 15.5px; line-height: 1.95; color: var(--md-on-surface); }
-.la-raw .la-pre { color: #bcd3ff; }
 
 .la-card-head { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; color: var(--md-outline); font-size: 11px; }
 .la-card-head span { letter-spacing: .06em; }

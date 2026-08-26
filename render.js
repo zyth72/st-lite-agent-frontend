@@ -112,15 +112,6 @@ function makeOutSection(st, isWriter) {
   return det;
 }
 
-function makeRawSection(st) {
-  const pre = h('pre', { class: 'la-pre la-raw', id: 'la-raw-' + st.id });
-  pre._raw = '';
-  const det = h('details', { class: 'la-raw' });
-  det.appendChild(h('summary', { text: '原始 JSON' }));
-  det.appendChild(h('div', { class: 'la-reason-body' }, [pre]));
-  return det;
-}
-
 /** 懒创建某段的卡片(仅 llm 段);已存在则返回。卡片初始只有标题行。 */
 function ensureStage(stageId) {
   const bodyEl = document.getElementById('lite-agent-body');
@@ -173,15 +164,11 @@ export function appendText(stage, kind, text) {
   const group = ensureStage(stage);
   if (!group) return;
   const isReason = kind === 'reasoning';
-  const isRaw = kind === 'raw';
-  const secId = (isReason ? 'la-reason-' : isRaw ? 'la-raw-' : 'la-out-') + stage;
+  const secId = (isReason ? 'la-reason-' : 'la-out-') + stage;
   let el = document.getElementById(secId);
   if (!el) {
     const st = findStage(stage) || { id: stage, type: 'llm' };
-    let det;
-    if (isReason) det = makeReasonSection(st);
-    else if (isRaw) det = makeRawSection(st);
-    else det = makeOutSection(st, st.id === 'writer');
+    const det = isReason ? makeReasonSection(st) : makeOutSection(st, st.id === 'writer');
     group.appendChild(det);
     el = det.querySelector('pre');
   }
