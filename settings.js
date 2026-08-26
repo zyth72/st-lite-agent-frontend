@@ -8,14 +8,22 @@ import { restoreGroups } from './render.js';
 let settingsMode = false;
 let cfgData = null;
 let currentBase = '';
+let savedBodyHTML = '';
 
 export function toggleSettings(base) {
   currentBase = base;
   settingsMode = !settingsMode;
   if (settingsMode) {
+    const bodyEl = document.getElementById('lite-agent-body');
+    savedBodyHTML = bodyEl ? bodyEl.innerHTML : '';
     loadSettings(base);
   } else {
-    restoreGroups();
+    const bodyEl = document.getElementById('lite-agent-body');
+    if (bodyEl && savedBodyHTML) {
+      bodyEl.innerHTML = savedBodyHTML;
+    } else {
+      restoreGroups();
+    }
   }
 }
 
