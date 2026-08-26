@@ -1,8 +1,11 @@
 /**
  * 面板内容渲染:markdown 渲染队列 + 各 llm 段分组(思维链/正文)与状态图标。
- * 显示策略:reset 只记录段清单并显示"等待执行"占位;收到某段的 stage 事件
- * 才创建该段卡片(未执行的一开始隐藏,执行到哪段出现哪段);正文默认折叠。
- * 不持有外部状态(除段清单/状态缓存);DOM 一律 getElementById 查找。
+ * 显示策略:
+ *   - reset 只记录 llm 段清单(builtin 一律不展示)并显示"等待执行"占位;
+ *   - 收到某段的 stage 事件才创建该段卡片(执行到哪段出现哪段);
+ *   - 卡片初始只有标题行;思维链/正文哪个先有文本,哪个区块才出现;
+ *   - 单卡可整体折叠(点标题行),折叠后只留标题;
+ *   - 思维链/正文默认折叠,点开才看。
  */
 import { marked } from './marked.esm.js';
 import { h } from './dom.js';
@@ -38,6 +41,14 @@ let lastStages = [];
 let stageStatus = {};
 const STATUS_ICONS = { running: '⏳', done: '✅', failed: '❌' };
 
+function filterLlm(stages) {
+  return (stages || []).filter((s) => s.type !== 'builtin');
+}
+
+function findStage(id) {
+  return lastStages.find((s) => s.id === id);
+}
+
 function applyStatus(group, stageId, status) {
   const dot = group.querySelector('#la-dot-' + stageId);
   const label = group.querySelector('#la-label-' + stageId);
@@ -50,39 +61,48 @@ function showPlaceholder(bodyEl, text) {
   bodyEl.appendChild(h('div', { class: 'la-dim la-pending-placeholder', text: text }));
 }
 
-/** 懒创建某段的卡片;已存在则直接返回。卡片创建后按缓存状态补上色彩。 */
+function makeReasonSection(st) {
+  const pre = h('pre', { class: 'la-pre', id: 'la-reason-' + st.id });
+  pre._raw = '';
+  const det = h('details', { class: 'la-reason' });
+  det.appendChild(h('summary', { text: '思维链' }));
+  det.appendChild(h('div', { class: 'la-reason-body' }, [pre]));
+  return det;
+}
+
+function makeOutSection(st, isWriter) {
+  const pre = h('pre', { class: 'la-pre', id: 'la-out-' + st.id });
+  pre._raw = '';
+  const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
+    if (pre) navigator.clipboard && navigator.clipboard.writeText(pre._raw || '');
+  } });
+  const det = h('details', { class: isWriter ? 'la-out la-prose' : 'la-out' });
+  det.appendChild(h('summary', { text: '正文' }));
+  det.appendChild(h('div', { class: 'la-card' }, [
+    h('div', { class: 'la-card-head' }, [h('span', { text: '正文' }), copyBtn]),
+    pre,
+  ]));
+  return det;
+}
+
+/** 懒创建某段的卡片(仅 llm 段);已存在则返回。卡片初始只有标题行。 */
 function ensureStage(stageId) {
   const bodyEl = document.getElementById('lite-agent-body');
   if (!bodyEl) return null;
   let group = document.getElementById('la-group-' + stageId);
   if (group) return group;
-  const st = lastStages.find((s) => s.id === stageId) || { id: stageId, type: 'llm' };
+  const st = findStage(stageId);
+  if (!st) return null; // 不在 llm 清单内(含 builtin)不展示
   const placeholder = bodyEl.querySelector('.la-pending-placeholder');
   if (placeholder) placeholder.remove();
 
-  const isWriter = st.id === 'writer';
   const head = h('div', { class: 'la-step-head' }, [
     h('span', { class: 'la-step-dot', id: 'la-dot-' + st.id }),
     h('span', { class: 'la-step-title', id: 'la-label-' + st.id, text: st.id }),
   ]);
-  const reasonPre = h('pre', { class: 'la-pre', id: 'la-reason-' + st.id });
-  reasonPre._raw = '';
-  const reasonDet = h('details', { class: 'la-reason' });
-  reasonDet.appendChild(h('summary', { text: '思维链' }));
-  reasonDet.appendChild(h('div', { class: 'la-reason-body' }, [reasonPre]));
-  const outPre = h('pre', { class: 'la-pre', id: 'la-out-' + st.id });
-  outPre._raw = '';
-  const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
-    if (outPre) navigator.clipboard && navigator.clipboard.writeText(outPre._raw || '');
-  } });
-  // 正文默认折叠(用户要求:避免一开始全部铺开)
-  const outDet = h('details', { class: isWriter ? 'la-out la-prose' : 'la-out' });
-  outDet.appendChild(h('summary', { text: '正文' }));
-  outDet.appendChild(h('div', { class: 'la-card' }, [
-    h('div', { class: 'la-card-head' }, [h('span', { text: '正文' }), copyBtn]),
-    outPre,
-  ]));
-  group = h('div', { class: 'la-group', id: 'la-group-' + st.id }, [head, reasonDet, outDet]);
+  group = h('div', { class: 'la-group', id: 'la-group-' + st.id }, [head]);
+  // 单卡整体折叠:点标题行,只留标题;再点展开
+  head.addEventListener('click', () => group.classList.toggle('closed'));
   bodyEl.appendChild(group);
   if (stageStatus[st.id]) applyStatus(group, st.id, stageStatus[st.id]);
   return group;
@@ -92,7 +112,7 @@ function ensureStage(stageId) {
 export function renderGroups(stages) {
   const bodyEl = document.getElementById('lite-agent-body');
   if (!bodyEl) return;
-  lastStages = stages || [];
+  lastStages = filterLlm(stages);
   stageStatus = {};
   showPlaceholder(bodyEl, lastStages.length ? '等待 agent 执行…' : '暂无 llm 步骤');
 }
@@ -110,17 +130,26 @@ export function restoreGroups() {
   visible.forEach((id) => ensureStage(id));
 }
 
+/** 文本流入:对应区块(思维链/正文)不存在时懒创建,哪个有文本哪个出现。 */
 export function appendText(stage, kind, text) {
   if (!text) return;
-  const id = (kind === 'reasoning' ? 'la-reason-' : 'la-out-') + stage;
-  const el = document.getElementById(id);
-  if (el) {
-    el._raw = (el._raw || '') + text;
-    scheduleRender(el);
+  const group = ensureStage(stage);
+  if (!group) return;
+  const isReason = kind === 'reasoning';
+  const secId = (isReason ? 'la-reason-' : 'la-out-') + stage;
+  let el = document.getElementById(secId);
+  if (!el) {
+    const st = findStage(stage) || { id: stage, type: 'llm' };
+    const det = isReason ? makeReasonSection(st) : makeOutSection(st, st.id === 'writer');
+    group.appendChild(det);
+    el = det.querySelector('pre');
   }
+  el._raw = (el._raw || '') + text;
+  scheduleRender(el);
 }
 
 export function setStageStatus(stageId, status) {
+  if (!findStage(stageId)) return; // 忽略清单外的段(如 builtin)
   stageStatus[stageId] = status;
   const group = ensureStage(stageId);
   if (group) applyStatus(group, stageId, status);

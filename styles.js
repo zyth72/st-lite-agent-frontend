@@ -171,7 +171,20 @@ export function css() {
   margin-bottom: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
 }
-.la-step-head { display: flex; align-items: center; gap: 9px; margin-bottom: 2px; }
+.la-step-head { display: flex; align-items: center; gap: 9px; margin-bottom: 2px; cursor: pointer; user-select: none; border-radius: 10px; padding: 3px 4px; margin: -3px -4px; transition: background .18s ease; }
+.la-step-head:hover { background: var(--md-state-hover); }
+.la-step-head::after {
+  content: '';
+  margin-left: auto;
+  width: 8px; height: 8px;
+  border-right: 1.8px solid var(--md-outline);
+  border-bottom: 1.8px solid var(--md-outline);
+  transform: rotate(-135deg);
+  transition: transform .2s ease;
+}
+.la-group.closed .la-step-head::after { transform: rotate(45deg); }
+/* 单卡整体折叠:折叠后只留标题行 */
+.la-group.closed > details { display: none; }
 .la-step-title { font-size: 13.5px; font-weight: 600; color: var(--md-on-surface); }
 .la-step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--md-outline-variant); flex: none; }
 .la-step-dot.running { background: var(--md-run); box-shadow: 0 0 0 3px rgba(245, 199, 126, 0.14); }
