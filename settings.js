@@ -16,9 +16,11 @@ export function toggleSettings(base) {
   if (settingsMode) {
     const bodyEl = document.getElementById('lite-agent-body');
     savedBodyHTML = bodyEl ? bodyEl.innerHTML : '';
+    if (bodyEl) bodyEl.dataset.mode = 'settings';
     loadSettings(base);
   } else {
     const bodyEl = document.getElementById('lite-agent-body');
+    if (bodyEl) bodyEl.removeAttribute('data-mode');
     if (bodyEl && savedBodyHTML) {
       bodyEl.innerHTML = savedBodyHTML;
     } else {

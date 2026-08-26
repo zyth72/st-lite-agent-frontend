@@ -61,6 +61,12 @@ function showPlaceholder(bodyEl, text) {
   bodyEl.appendChild(h('div', { class: 'la-dim la-pending-placeholder', text: text }));
 }
 
+/** 设置模式(⚙️)下屏蔽 SSE 渲染,避免卡片写进设置表单。 */
+function isSettingsMode() {
+  const bodyEl = document.getElementById('lite-agent-body');
+  return !!bodyEl && bodyEl.dataset.mode === 'settings';
+}
+
 function makeReasonSection(st) {
   const pre = h('pre', { class: 'la-pre', id: 'la-reason-' + st.id });
   pre._raw = '';
@@ -110,6 +116,7 @@ function ensureStage(stageId) {
 
 /** reset:新请求到达,重置状态,只显示占位;每段卡片等 stage 事件再出现。 */
 export function renderGroups(stages) {
+  if (isSettingsMode()) return;
   const bodyEl = document.getElementById('lite-agent-body');
   if (!bodyEl) return;
   lastStages = filterLlm(stages);
@@ -119,6 +126,7 @@ export function renderGroups(stages) {
 
 /** 从设置模式返回:恢复当前已出现的卡片(保留状态缓存)。 */
 export function restoreGroups() {
+  if (isSettingsMode()) return;
   const bodyEl = document.getElementById('lite-agent-body');
   if (!bodyEl) return;
   const visible = Object.keys(stageStatus);
@@ -132,7 +140,7 @@ export function restoreGroups() {
 
 /** 文本流入:对应区块(思维链/正文)不存在时懒创建,哪个有文本哪个出现。 */
 export function appendText(stage, kind, text) {
-  if (!text) return;
+  if (!text || isSettingsMode()) return;
   const group = ensureStage(stage);
   if (!group) return;
   const isReason = kind === 'reasoning';
@@ -149,6 +157,7 @@ export function appendText(stage, kind, text) {
 }
 
 export function setStageStatus(stageId, status) {
+  if (isSettingsMode()) return;
   if (!findStage(stageId)) return; // 忽略清单外的段(如 builtin)
   stageStatus[stageId] = status;
   const group = ensureStage(stageId);
