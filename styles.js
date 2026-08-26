@@ -43,6 +43,8 @@ export function css() {
   flex-direction: column;
   z-index: 2147483646;
   overflow: hidden;
+  width: 520px;
+  max-width: 520px;
   height: min(72vh, 760px);
   max-height: 92vh;
   background: rgba(20, 18, 24, 0.96);
