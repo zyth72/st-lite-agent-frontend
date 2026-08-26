@@ -93,11 +93,19 @@ const SettingsView = defineComponent({
     async function loadModels(p) {
       try {
         const r = await fetch(S.base.value + '/agent/config/load-models', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.name, baseurl: p.baseurl, key: p.key }) });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (!r.ok) {
+          let msg = 'HTTP ' + r.status;
+          try { const j = await r.json(); if (j && (j.error || j.message)) msg = j.error || j.message; } catch (e) {}
+          throw new Error(msg);
+        }
         const j = await r.json();
         p.models = j.models || [];
-        tip.value = '已加载 ' + p.models.length + ' 个模型';
-      } catch (e) { tip.value = '加载模型失败: ' + e.message; }
+        tip.value = p.models.length
+          ? '已加载 ' + p.models.length + ' 个模型'
+          : '该上游未返回模型,请在下方手动添加(留空则按名称直发)';
+      } catch (e) {
+        tip.value = '加载模型失败:' + e.message + '。该上游可能不支持 /models,可在下方手动添加模型(留空则按名称直发)';
+      }
     }
     async function save() {
       const stages = (cfg.value.stages || []).map((st) => ({ id: st.id, model: st.model, thinking: st.think ? 'enabled' : 'disabled', stream: st.stream, max_tokens: st.max ? Number(st.max) : null }));
