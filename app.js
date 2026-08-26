@@ -64,12 +64,15 @@ const StageCard = defineComponent({
 
 const SettingsView = defineComponent({
   setup() {
-    const cfg = ref({ keys: [], providers: [], stages: [] });
+    const cfg = ref({ providers: [], stages: [] });
     const tip = ref('');
     function toEditable(d) {
+      const keys = d.keys || [];
       return {
-        keys: (d.keys || []).map((k) => ({ name: k.name, hint: k.hint, key: '' })),
-        providers: (d.providers || []).map((p) => ({ name: p.name, baseurl: p.baseurl, models: p.models || [], _new: '' })),
+        providers: (d.providers || []).map((p) => {
+          const ki = keys.find((k) => k.name === p.name);
+          return { name: p.name, baseurl: p.baseurl, models: p.models || [], keyHint: ki ? ki.hint : '', key: '', _new: '' };
+        }),
         stages: (d.stages || []).filter((s) => s.type === 'llm').map((st) => ({ id: st.id, model: st.model || '', think: st.thinking === 'enabled', stream: !!st.stream, max: st.max_tokens || null })),
       };
     }
@@ -85,10 +88,13 @@ const SettingsView = defineComponent({
       return all;
     });
     function addModel(p) { const v = (p._new || '').trim(); if (v && !p.models.includes(v)) { p.models.push(v); p._new = ''; } }
+    function addProvider() { cfg.value.providers.push({ name: '', baseurl: '', models: [], keyHint: '', key: '', _new: '' }); }
+    function removeProvider(i) { cfg.value.providers.splice(i, 1); }
     async function save() {
       const stages = (cfg.value.stages || []).map((st) => ({ id: st.id, model: st.model, thinking: st.think ? 'enabled' : 'disabled', stream: st.stream, max_tokens: st.max ? Number(st.max) : null }));
+      // key 按 provider 名写入 .env;空 = 删除该行(后端处理)
       const providers = (cfg.value.providers || []).map((p) => ({ name: p.name, baseurl: p.baseurl, models: p.models }));
-      const keys = (cfg.value.keys || []).map((k) => ({ name: k.name, key: k.key }));
+      const keys = (cfg.value.providers || []).map((p) => ({ name: p.name, key: p.key }));
       try {
         const r = await fetch(S.base.value + '/agent/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stages, providers, keys }) });
         if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -96,25 +102,25 @@ const SettingsView = defineComponent({
         await load();
       } catch (e) { tip.value = '保存失败: ' + e.message; }
     }
-    return { cfg, tip, modelOptions, addModel, save, back: S.closeSettings };
+    return { cfg, tip, modelOptions, addModel, addProvider, removeProvider, save, back: S.closeSettings };
   },
   template: `
 <div class="la-settings">
   <div class="la-set-group">
-    <div class="la-set-group-title">上游密钥</div>
-    <div class="la-set-hint">key 留空 = 删除该行</div>
-    <div v-for="(k,i) in cfg.keys" :key="i" class="la-set-row">
-      <span class="la-set-label">{{k.name}}</span>
-      <LaInput class="la-set-input" type="password" v-model="k.key" :placeholder="'···'+(k.hint||'')"/>
-    </div>
-  </div>
-  <div class="la-set-group">
-    <div class="la-set-group-title">上游</div>
-    <div class="la-set-hint">baseurl 与模型列表(每行一个,空 = 自动发现)</div>
+    <div class="la-set-group-title">API 配置</div>
+    <div class="la-set-hint">上游名称 / Base URL / 密钥 / 模型列表(每行一个,留空 = 自动发现)</div>
     <div v-for="(p,i) in cfg.providers" :key="i" class="la-provider">
       <div class="la-set-row">
-        <span class="la-set-label">{{p.name}}</span>
-        <LaInput class="la-set-input" v-model="p.baseurl"/>
+        <span class="la-set-label">名称</span>
+        <LaInput class="la-set-input" v-model="p.name" placeholder="如 deepseek / 火山"/>
+      </div>
+      <div class="la-set-row">
+        <span class="la-set-label">Base URL</span>
+        <LaInput class="la-set-input" v-model="p.baseurl" placeholder="https://api.deepseek.com/v1"/>
+      </div>
+      <div class="la-set-row">
+        <span class="la-set-label">密钥</span>
+        <LaInput class="la-set-input" type="password" v-model="p.key" :placeholder="p.keyHint ? '···'+(p.keyHint) : '留空 = 删除该行'"/>
       </div>
       <details class="la-models">
         <summary>模型管理({{ (p.models||[]).length }})</summary>
@@ -130,6 +136,12 @@ const SettingsView = defineComponent({
           </div>
         </div>
       </details>
+      <div class="la-provider-actions">
+        <LaButton class="la-set-danger" text="删除该上游" @click="removeProvider(i)"/>
+      </div>
+    </div>
+    <div class="la-set-actions">
+      <LaButton class="la-btn-tonal" text="+ 新增上游" @click="addProvider"/>
     </div>
   </div>
   <div class="la-set-group">

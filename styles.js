@@ -316,6 +316,9 @@ export function css() {
 #lite-agent-body button.la-model-del:hover { background: var(--md-state-hover) !important; border-color: var(--md-error) !important; }
 .la-model-add-row { display: flex; gap: 8px; padding: 6px 8px 2px; }
 .la-model-add-row input { flex: 1; min-width: 0; }
+.la-provider-actions { display: flex; justify-content: flex-end; padding: 2px 0; }
+#lite-agent-body button.la-set-danger { background: transparent !important; border: none !important; color: var(--md-error) !important; font-size: 12px !important; padding: 4px 10px !important; }
+#lite-agent-body button.la-set-danger:hover { background: var(--md-state-hover) !important; }
 @media (max-width: 768px) {
   .la-set-label, .la-set-stage-name { flex-basis: 76px; }
   .la-set-toggle { gap: 4px; }
