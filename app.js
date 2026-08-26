@@ -227,8 +227,8 @@ const App = defineComponent({
         panelDrag.moved = true;
         const vw = innerWidth, vh = innerHeight;
         const pw = Math.min(520, vw);
-        // 高度与 CSS 一致(移动 80vh / 桌面 66vh),保证拖动夹取后不会移出视口顶
-        const ph = vh * (vw <= 768 ? 0.8 : 0.66);
+        // 高度与 CSS 一致(桌面 min(72vh,760) / 移动 min(82vh,720)),保证固定高度且拖不出视口
+        const ph = vw <= 768 ? Math.min(vh * 0.82, 720) : Math.min(vh * 0.72, 760);
         S.panelPos.value.right = Math.min(Math.max(0, panelDrag.sr - dx), Math.max(0, vw - pw - 8));
         S.panelPos.value.bottom = Math.min(Math.max(0, panelDrag.sb - dy), Math.max(0, vh - ph - 8));
       }
