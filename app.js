@@ -99,10 +99,15 @@ const SettingsView = defineComponent({
           throw new Error(msg);
         }
         const j = await r.json();
-        p.models = j.models || [];
-        tip.value = p.models.length
-          ? '已加载 ' + p.models.length + ' 个模型'
-          : '该上游未返回模型,请在下方手动添加(留空则按名称直发)';
+        if (j.unsupported) {
+          p.models = [];
+          tip.value = '该上游不支持自动获取模型,请在下方手动添加(留空则按名称直发)';
+        } else {
+          p.models = j.models || [];
+          tip.value = p.models.length
+            ? '已加载 ' + p.models.length + ' 个模型'
+            : '该上游未返回模型,请在下方手动添加(留空则按名称直发)';
+        }
       } catch (e) {
         tip.value = '加载模型失败:' + e.message + '。该上游可能不支持 /models,可在下方手动添加模型(留空则按名称直发)';
       }
