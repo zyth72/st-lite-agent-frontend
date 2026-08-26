@@ -266,6 +266,15 @@ export function css() {
   transition: background .18s ease, color .18s ease, border-color .18s ease;
 }
 #lite-agent-body button.la-copy:hover { background: var(--md-state-hover) !important; color: var(--md-on-surface) !important; border-color: var(--md-outline) !important; }
+#lite-agent-body button.la-md-toggle {
+  background: rgba(168, 200, 255, 0.12) !important;
+  border: 1px solid rgba(168, 200, 255, 0.35) !important;
+  color: var(--md-primary) !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
+  padding: 2px 10px !important;
+}
+#lite-agent-body button.la-md-toggle:hover { background: rgba(168, 200, 255, 0.22) !important; border-color: var(--md-primary) !important; }
 
 /* ===== 设置面板组件 ===== */
 .la-dim { color: var(--md-outline); font-size: 12px; padding: 12px; }

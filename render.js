@@ -37,6 +37,8 @@ function scheduleRender(el) {
   }
 }
 
+const RENDER_BASE = (typeof localStorage !== 'undefined' && localStorage.getItem('st-lite-agent-base')) || 'http://127.0.0.1:7890';
+
 let lastStages = [];
 let stageStatus = {};
 const STATUS_ICONS = { running: '⏳', done: '✅', failed: '❌' };
@@ -97,18 +99,58 @@ function makeReasonSection(st) {
   return det;
 }
 
+/** json 段:正文默认显示 LLM 原始输出;点按钮懒加载后端渲染接口的 Markdown,来回切。 */
+async function toggleJsonView(det, stageId) {
+  const pre = det.querySelector('pre');
+  const btn = det.querySelector('.la-md-toggle');
+  if (!pre || !btn) return;
+  const cur = btn.dataset.mode || 'json';
+  if (cur === 'json') {
+    btn.textContent = '…';
+    try {
+      if (pre.dataset.md == null) {
+        const resp = await fetch(RENDER_BASE + '/agent/render-md', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: pre._raw || '' }),
+        });
+        const j = await resp.json();
+        pre.dataset.md = j && j.md != null ? j.md : '';
+      }
+    } catch (e) {
+      pre.dataset.md = '';
+    }
+    pre.innerHTML = mdRender(pre.dataset.md || '');
+    btn.dataset.mode = 'md';
+    btn.textContent = 'JSON';
+  } else {
+    pre.textContent = pre._raw || '';
+    btn.dataset.mode = 'json';
+    btn.textContent = 'MD';
+  }
+}
+
 function makeOutSection(st, isWriter) {
+  const isJson = st.output === 'json';
   const pre = h('pre', { class: 'la-pre', id: 'la-out-' + st.id });
   pre._raw = '';
   const copyBtn = h('button', { class: 'la-copy', text: '复制', onclick: () => {
     if (pre) navigator.clipboard && navigator.clipboard.writeText(pre._raw || '');
   } });
+  const headKids = [h('span', { text: '正文' })];
+  let mdBtn = null;
+  if (isJson) {
+    mdBtn = h('button', { class: 'la-md-toggle', text: 'MD', title: '切换 原始 JSON / 渲染 MD', onclick: () => {} });
+    headKids.push(mdBtn);
+  }
+  headKids.push(copyBtn);
   const det = h('details', { class: isWriter ? 'la-out la-prose' : 'la-out' });
   det.appendChild(h('summary', { text: '正文' }));
   det.appendChild(h('div', { class: 'la-card' }, [
-    h('div', { class: 'la-card-head' }, [h('span', { text: '正文' }), copyBtn]),
+    h('div', { class: 'la-card-head' }, headKids),
     pre,
   ]));
+  if (mdBtn) mdBtn.addEventListener('click', () => toggleJsonView(det, st.id));
   return det;
 }
 
@@ -166,16 +208,23 @@ export function appendText(stage, kind, text) {
   const isReason = kind === 'reasoning';
   const secId = (isReason ? 'la-reason-' : 'la-out-') + stage;
   let el = document.getElementById(secId);
+  let stJson = false;
   if (!el) {
     const st = findStage(stage) || { id: stage, type: 'llm' };
+    stJson = st.output === 'json';
     const det = isReason ? makeReasonSection(st) : makeOutSection(st, st.id === 'writer');
     group.appendChild(det);
     el = det.querySelector('pre');
+  } else {
+    const st = findStage(stage) || { id: stage, type: 'llm' };
+    stJson = st.output === 'json';
   }
   // 快照/设置返回恢复的元素没有 _raw,用当前渲染文本兜底,避免流式覆盖清空旧内容
   if (el._raw == null) el._raw = el.textContent || '';
   el._raw = (el._raw || '') + text;
-  scheduleRender(el);
+  // json 段正文=LLM 原始输出直显(不做 markdown 加工);MD 视图由切换按钮懒加载
+  if (stJson) el.textContent = el._raw;
+  else scheduleRender(el);
 }
 
 export function setStageStatus(stageId, status) {
