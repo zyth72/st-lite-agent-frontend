@@ -220,7 +220,10 @@ const App = defineComponent({
       const dx = e.clientX - panelDrag.sx, dy = e.clientY - panelDrag.sy;
       if (Math.abs(dx) + Math.abs(dy) > 3) {
         panelDrag.moved = true;
-        const vw = innerWidth, vh = innerHeight, pw = Math.min(520, vw), ph = vh * 0.66;
+        const vw = innerWidth, vh = innerHeight;
+        const pw = Math.min(520, vw);
+        // 高度与 CSS 一致(移动 80vh / 桌面 66vh),保证拖动夹取后不会移出视口顶
+        const ph = vh * (vw <= 768 ? 0.8 : 0.66);
         S.panelPos.value.right = Math.min(Math.max(0, panelDrag.sr - dx), Math.max(0, vw - pw - 8));
         S.panelPos.value.bottom = Math.min(Math.max(0, panelDrag.sb - dy), Math.max(0, vh - ph - 8));
       }

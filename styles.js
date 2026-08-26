@@ -42,6 +42,7 @@ export function css() {
   display: none;
   flex-direction: column;
   z-index: 2147483646;
+  max-height: 92vh;
   background: rgba(20, 18, 24, 0.96);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
