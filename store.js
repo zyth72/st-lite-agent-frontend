@@ -4,7 +4,7 @@
 import { ref, reactive } from './lib/vue.esm-browser.prod.js';
 import { useLocalStorage } from './hooks.js';
 
-export const base = useLocalStorage('st-lite-agent-base', 'http://127.0.0.1:7890');
+export const base = useLocalStorage('st-lite-agent-base', 'http://127.0.0.1:6789');
 export const ballPos = useLocalStorage('st-lite-agent-ball-pos', { right: 18, bottom: 18 });
 export const panelPos = useLocalStorage('st-lite-agent-panel-pos', { right: 18, bottom: 76 });
 
@@ -63,7 +63,7 @@ export function togglePanel() { panelOpen.value = !panelOpen.value; }
 export function openSettings() { view.value = 'settings'; }
 export function closeSettings() { view.value = 'stages'; }
 export function clearBody() { resetData(); }
-export function setBase(v) { base.value = v || 'http://127.0.0.1:7890'; connect(); }
+export function setBase(v) { base.value = v || 'http://127.0.0.1:6789'; connect(); }
 
 /** 面板"停止":中止当前正在进行的 agent 请求(酒馆刷新后手动停用)。 */
 export function stopCurrent() {
