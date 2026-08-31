@@ -1,6 +1,6 @@
 /**
  * st-lite-agent 前端插件入口(ST 扩展)。
- * 职责:环境探测(第三方/内置路径)、注入样式、挂载 Vue 应用、连接 SSE。
+ * 职责:环境探测(第三方/内置路径)、注入样式、挂载 Vue 应用、启动轮询。
  * 底层:Vue 3(esm-browser,含模板编译器)+ store/hooks + components,无构建。
  */
 import { css } from './styles.js';
