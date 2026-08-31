@@ -1,5 +1,10 @@
 /**
- * 响应式状态 + SSE 连接。Vue 组件只读状态/调 action,不直接碰 SSE。
+ * 响应式状态 + 轮询。Vue 组件只读状态/调 action,不直接碰网络细节。
+ *
+ * 数据获取用轮询(默认 1.5s)而非 EventSource:服务重启/断连后轮询天然自愈,
+ * 不需要刷新页面。数据源全部来自落盘文件,与后端解耦:
+ *   GET /agent/requests                     → 最新请求 reqId + 段元数据
+ *   GET /agent/steps/:reqId/:file?offset=N  → 增量续读 reasoning/output 落盘文件
  */
 import { ref, reactive } from './lib/vue.esm-browser.prod.js';
 import { useLocalStorage } from './hooks.js';
@@ -20,38 +25,84 @@ export function visibleStageIds() {
   return Object.keys(statuses).filter((id) => stages.value.some((s) => s.id === id));
 }
 
-let es = null;
-export function connect() {
-  if (es) es.close();
-  es = new EventSource(base.value + '/agent/stream');
-  es.onopen = () => { connected.value = true; };
-  es.onerror = () => { connected.value = false; };
-  es.addEventListener('reset', (ev) => {
-    if (view.value === 'settings') return;
-    try {
-      const d = JSON.parse(ev.data);
-      stages.value = (d.stages || []).filter((s) => s.type === 'llm');
-    } catch (e) {}
-    resetData();
-  });
-  es.addEventListener('stage', (ev) => {
-    if (view.value === 'settings') return;
-    try {
-      const d = JSON.parse(ev.data);
-      if (!stages.value.some((s) => s.id === d.stageId)) return;
-      statuses[d.stageId] = d.status;
-    } catch (e) {}
-  });
-  es.addEventListener('text', (ev) => {
-    if (view.value === 'settings') return;
-    try {
-      const d = JSON.parse(ev.data);
-      const t = stageText[d.stage] || (stageText[d.stage] = { reasoning: '', output: '' });
-      if (d.kind === 'reasoning') t.reasoning += d.text; else t.output += d.text;
-    } catch (e) {}
-  });
+const POLL_MS = 1500;
+let pollTimer = null;
+let pollBusy = false;
+let currentReqId = null;
+const offsets = {}; // 'reqId/file' -> 已读偏移(增量续读)
+const lineBuf = {}; // 'reqId/file' -> 半行缓冲(落盘标记行过滤)
+
+// 落盘文件里的头/分隔/结束标记行不进面板:
+//   ========== 段 [x](llm) 输出(正文) ==========
+//   ----- 输出 -----
+//   ----- 输出结束 (tok=…|bytes=…|失败: …) -----
+function appendClean(stageId, kind, key, text) {
+  const t = stageText[stageId] || (stageText[stageId] = { reasoning: '', output: '' });
+  const buf = (lineBuf[key] || '') + text;
+  const lines = buf.split('\n');
+  lineBuf[key] = lines[lines.length - 1]; // 末尾半行留到下一次拼齐
+  for (const line of lines.slice(0, -1)) {
+    const trimmed = line.trim();
+    if (/^={5,}/.test(trimmed) || /^-{5,}/.test(trimmed)) continue;
+    if (kind === 'reasoning') t.reasoning += line + '\n';
+    else t.output += line + '\n';
+  }
 }
-export function disconnect() { if (es) { es.close(); es = null; } }
+
+async function pollOnce() {
+  if (pollBusy) return;
+  pollBusy = true;
+  try {
+    const res = await fetch(base.value + '/agent/requests');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    connected.value = true;
+
+    const latest = (j.requests || [])[0];
+    const metas = (j.stageMeta || []);
+    if (!latest) return;
+    if (latest.id !== currentReqId) {
+      // 新请求:清空上一轮的面板数据
+      currentReqId = latest.id;
+      for (const k of Object.keys(offsets)) delete offsets[k];
+      for (const k of Object.keys(lineBuf)) delete lineBuf[k];
+      resetData();
+      if (view.value !== 'settings') stages.value = metas;
+    }
+    if (view.value === 'settings') return;
+
+    for (const f of latest.files || []) {
+      if (!/\.(reasoning|output)\.txt$/.test(f)) continue;
+      const stageId = f.split('.')[0];
+      if (!metas.some((s) => s.id === stageId)) continue;
+      const kind = f.endsWith('.reasoning.txt') ? 'reasoning' : 'output';
+      const key = latest.id + '/' + f;
+      const r2 = await fetch(base.value + '/agent/steps/' + encodeURIComponent(latest.id) + '/'
+        + encodeURIComponent(f) + '?offset=' + (offsets[key] || 0));
+      if (!r2.ok) continue;
+      const d = await r2.json();
+      if (!d || !d.exists) continue;
+      offsets[key] = d.offset || offsets[key] || 0;
+      if (!d.text) continue;
+      appendClean(stageId, kind, key, d.text);
+      const done = /输出结束/.test(d.text);
+      const failed = /输出结束 \(失败/.test(d.text);
+      if (!statuses[stageId]) statuses[stageId] = failed ? 'failed' : 'running';
+      if (done) statuses[stageId] = failed ? 'failed' : 'done';
+    }
+  } catch (e) {
+    connected.value = false;
+  } finally {
+    pollBusy = false;
+  }
+}
+
+export function connect() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollOnce();
+  pollTimer = setInterval(pollOnce, POLL_MS);
+}
+export function disconnect() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
 export function resetData() {
   for (const k of Object.keys(statuses)) delete statuses[k];
@@ -65,7 +116,7 @@ export function closeSettings() { view.value = 'stages'; }
 export function clearBody() { resetData(); }
 export function setBase(v) { base.value = v || 'http://127.0.0.1:6789'; connect(); }
 
-/** 面板"停止":中止当前正在进行的 agent 请求(酒馆刷新后手动停用)。 */
+/** 面板"停止":中止当前正在进行的 agent 请求。 */
 export function stopCurrent() {
   fetch(base.value + '/agent/stop', { method: 'POST' }).catch(() => {});
 }
