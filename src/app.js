@@ -11,7 +11,24 @@ import * as S from './store.js';
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function md(text) { return marked.parse(text || '', { gfm: true, breaks: true }); }
 
-const STAGE_ICON = { running: '⏳', done: '✅', failed: '❌' };
+const STAGE_ICON = {
+  facts: 'fa-clipboard-list',
+  parallel: 'fa-code-branch',
+  relationships: 'fa-diagram-project',
+  reply: 'fa-comment-dots',
+  settlement: 'fa-receipt',
+  writer: 'fa-pen-nib',
+  intrude: 'fa-door-open',
+  parse: 'fa-magnifying-glass-chart',
+  split: 'fa-scissors',
+  state: 'fa-box-archive',
+};
+const STATUS_TEXT = { running: '运行中', done: '已完成', failed: '失败' };
+function fmtLen(s) {
+  const n = (s || '').length;
+  if (!n) return '';
+  return n >= 10000 ? (n / 10000).toFixed(1) + ' 万字' : n + ' 字';
+}
 
 const StageCard = defineComponent({
   props: { id: String },
@@ -24,7 +41,10 @@ const StageCard = defineComponent({
     });
     const status = computed(() => S.statuses[props.id] || '');
     const text = computed(() => S.stageText[props.id] || { reasoning: '', output: '' });
-    const icon = computed(() => STAGE_ICON[status.value] || '');
+    const stageIcon = computed(() => STAGE_ICON[props.id] || 'fa-gear');
+    const statusText = computed(() => STATUS_TEXT[status.value] || '');
+    const reasonLen = computed(() => fmtLen(text.value.reasoning));
+    const outLen = computed(() => fmtLen(text.value.output));
     const isJson = computed(() => stage.value.output === 'json');
     const reasonHtml = computed(() => md(text.value.reasoning));
     const outHtml = computed(() => {
@@ -33,21 +53,31 @@ const StageCard = defineComponent({
       return md(text.value.output);
     });
     const copy = (kind) => { const v = kind === 'reasoning' ? text.value.reasoning : text.value.output; navigator.clipboard && navigator.clipboard.writeText(v); };
-    return { stage, text, sv, status, icon, isJson, reasonHtml, outHtml, copy, toggleMd: S.toggleMd };
+    return { stage, text, sv, status, stageIcon, statusText, reasonLen, outLen, isJson, reasonHtml, outHtml, copy, toggleMd: S.toggleMd };
   },
   template: `
 <div class="la-group" :id="'la-group-'+stage.id" :class="{closed: sv.collapsed}">
   <div class="la-step-head" @click="sv.collapsed=!sv.collapsed">
     <span class="la-step-dot" :id="'la-dot-'+stage.id" :class="status"></span>
-    <span class="la-step-title" :id="'la-label-'+stage.id">{{ icon }} {{ stage.id }}</span>
+    <i class="fa-solid la-stage-icon" :class="stageIcon"></i>
+    <span class="la-step-title" :id="'la-label-'+stage.id">{{ stage.id }}</span>
+    <span v-if="statusText" class="la-status-text" :class="status">{{ statusText }}</span>
   </div>
   <template v-if="!sv.collapsed">
     <details class="la-reason" :id="'la-reason-'+stage.id" :open="sv.reasonOpen" v-if="text.reasoning">
-      <summary @click.prevent="sv.reasonOpen=!sv.reasonOpen">思维链</summary>
+      <summary @click.prevent="sv.reasonOpen=!sv.reasonOpen">
+        <i class="fa-solid fa-brain la-sum-icon"></i>
+        <span>思维链</span>
+        <span v-if="reasonLen" class="la-sum-meta">{{ reasonLen }}</span>
+      </summary>
       <div class="la-reason-body"><pre class="la-pre" :id="'la-reason-'+stage.id" v-html="reasonHtml"></pre></div>
     </details>
     <details class="la-out" :id="'la-out-'+stage.id" :class="{prose: stage.output==='stream'}" :open="sv.outOpen" v-if="text.output">
-      <summary @click.prevent="sv.outOpen=!sv.outOpen">正文</summary>
+      <summary @click.prevent="sv.outOpen=!sv.outOpen">
+        <i class="fa-solid fa-file-lines la-sum-icon"></i>
+        <span>正文</span>
+        <span v-if="outLen" class="la-sum-meta">{{ outLen }}</span>
+      </summary>
       <div class="la-card">
         <div class="la-card-head">
           <span>正文</span>

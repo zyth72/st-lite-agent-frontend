@@ -170,13 +170,16 @@ export function css() {
 
 /* ===== 步骤卡片(M3 filled card,圆角 12dp,无描边) ===== */
 .la-group {
-  background: var(--md-surface-high);
-  border: none;
+  background: rgba(43, 41, 48, 0.72);
+  border: 1px solid rgba(147, 143, 153, 0.10);
   border-radius: 16px;
   padding: 12px 14px 14px;
   margin-bottom: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  transition: border-color .2s ease, background .2s ease;
 }
+.la-group:hover { border-color: rgba(147, 143, 153, 0.22); }
+.la-group:has(.la-step-dot.running) { border-color: rgba(245, 199, 126, 0.35); background: rgba(48, 43, 40, 0.72); }
 .la-step-head { display: flex; align-items: center; gap: 9px; margin-bottom: 2px; cursor: pointer; user-select: none; border-radius: 10px; padding: 3px 4px; margin: -3px -4px; transition: background .18s ease; }
 .la-step-head:hover { background: var(--md-state-hover); }
 .la-step-head::after {
@@ -191,11 +194,27 @@ export function css() {
 .la-group.closed .la-step-head::after { transform: rotate(45deg); }
 /* 单卡整体折叠:折叠后只留标题行 */
 .la-group.closed > details { display: none; }
-.la-step-title { font-size: 13.5px; font-weight: 600; color: var(--md-on-surface); }
+.la-step-title { font-size: 13.5px; font-weight: 600; color: var(--md-on-surface); letter-spacing: .2px; }
+.la-stage-icon { font-size: 12.5px; width: 16px; text-align: center; color: var(--md-on-surface-variant); opacity: .9; }
+.la-status-text {
+  margin-left: 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+.la-status-text.running { color: var(--md-run); background: rgba(245, 199, 126, 0.12); }
+.la-status-text.done { color: var(--md-ok); background: rgba(123, 219, 154, 0.10); }
+.la-status-text.failed { color: var(--md-error); background: rgba(242, 184, 181, 0.12); }
 .la-step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--md-outline-variant); flex: none; }
-.la-step-dot.running { background: var(--md-run); box-shadow: 0 0 0 3px rgba(245, 199, 126, 0.14); }
+.la-step-dot.running { background: var(--md-run); box-shadow: 0 0 0 3px rgba(245, 199, 126, 0.14); animation: la-pulse 1.6s ease-in-out infinite; }
 .la-step-dot.done { background: var(--md-ok); box-shadow: 0 0 0 3px rgba(123, 219, 154, 0.14); }
 .la-step-dot.failed { background: var(--md-error); box-shadow: 0 0 0 3px rgba(242, 184, 181, 0.14); }
+@keyframes la-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(245, 199, 126, 0.14); }
+  50% { box-shadow: 0 0 0 6px rgba(245, 199, 126, 0.05); }
+}
 
 /* ===== 折叠区(M3 化 details/summary) ===== */
 .la-group details { margin-top: 6px; }
@@ -227,6 +246,10 @@ export function css() {
   transition: transform .2s ease;
 }
 .la-group details[open] > summary::after { transform: rotate(-135deg); }
+.la-sum-icon { font-size: 12px; width: 16px; text-align: center; color: var(--md-outline); transition: color .18s ease; }
+.la-group summary:hover .la-sum-icon { color: var(--md-primary); }
+.la-sum-meta { color: var(--md-outline); font-size: 11px; font-weight: 400; letter-spacing: .02em; }
+.la-group summary:hover .la-sum-meta { color: var(--md-on-surface-variant); }
 
 /* ===== 内容块(嵌套 lower 层级) ===== */
 .la-reason-body, .la-card {
