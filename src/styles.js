@@ -90,11 +90,11 @@ export function css() {
 
 /* ===== 面板头 ===== */
 #lite-agent-head {
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid rgba(147, 143, 153, 0.16);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   cursor: move;
   touch-action: none;
@@ -136,7 +136,7 @@ export function css() {
   border-color: var(--md-primary) !important;
   box-shadow: 0 0 0 1px var(--md-primary) !important;
 }
-#lite-agent-head input[type=text] { width: 120px !important; flex: 0 1 auto; }
+#lite-agent-head input[type=text] { width: 104px !important; flex: 0 1 auto; }
 #lite-agent-panel input[type=checkbox] {
   accent-color: var(--md-primary) !important;
   width: 16px !important; height: 16px !important; cursor: pointer; margin: 0;
@@ -162,7 +162,7 @@ export function css() {
 #lite-agent-panel button:hover { background: var(--md-state-hover) !important; }
 #lite-agent-panel button:focus-visible { background: var(--md-state-focus) !important; }
 #lite-agent-panel button:active { background: var(--md-state-pressed) !important; }
-#lite-agent-panel #lite-agent-head button { padding: 6px 12px !important; }
+#lite-agent-panel #lite-agent-head button { padding: 5px 10px !important; }
 #lite-agent-body button { background: var(--md-primary) !important; color: var(--md-on-primary) !important; }
 #lite-agent-body button:hover { background: #93b6f2 !important; box-shadow: 0 2px 8px rgba(168, 200, 255, 0.2) !important; }
 #lite-agent-body button.la-btn-tonal { background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container) !important; }
