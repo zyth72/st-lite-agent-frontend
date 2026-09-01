@@ -127,6 +127,8 @@ const App = defineComponent({
   components: { StageCard },
   setup() {
     const baseInput = ref(S.base.value);
+    const panelEl = ref(null);
+    const ballEl = ref(null);
     const visible = computed(() => S.visibleStageIds());
     const ballStyle = computed(() => ({ right: S.ballPos.value.right + 'px', bottom: S.ballPos.value.bottom + 'px' }));
     const panelStyle = computed(() => ({ right: S.panelPos.value.right + 'px', bottom: S.panelPos.value.bottom + 'px' }));
@@ -137,8 +139,10 @@ const App = defineComponent({
       const dx = e.clientX - ballDrag.sx, dy = e.clientY - ballDrag.sy;
       if (Math.abs(dx) + Math.abs(dy) > 8) {
         ballDrag.moved = true;
-        S.ballPos.value.right = Math.min(Math.max(0, ballDrag.sr - dx), Math.max(0, innerWidth - 54 - 8));
-        S.ballPos.value.bottom = Math.min(Math.max(0, ballDrag.sb - dy), Math.max(0, innerHeight - 54 - 8));
+        // 实测悬浮球当前渲染尺寸,不与 CSS 互追
+        const bw = ballEl.value ? ballEl.value.getBoundingClientRect().width : 54;
+        S.ballPos.value.right = Math.min(Math.max(0, ballDrag.sr - dx), Math.max(0, innerWidth - bw - 8));
+        S.ballPos.value.bottom = Math.min(Math.max(0, ballDrag.sb - dy), Math.max(0, innerHeight - bw - 8));
       }
     }
     function onBallUp() { if (ballDrag) { if (!ballDrag.moved) S.togglePanel(); ballDrag = null; } }
@@ -150,11 +154,10 @@ const App = defineComponent({
       if (Math.abs(dx) + Math.abs(dy) > 3) {
         panelDrag.moved = true;
         const vw = innerWidth, vh = innerHeight;
-        const pw = Math.min(440, vw);
-        // 高度与 CSS 一致(桌面 min(72vh,760) / 移动 min(82vh,720)),保证固定高度且拖不出视口
-        const ph = vw <= 768 ? Math.min(vh * 0.82, 720) : Math.min(vh * 0.64, 680);
-        S.panelPos.value.right = Math.min(Math.max(0, panelDrag.sr - dx), Math.max(0, vw - pw - 8));
-        S.panelPos.value.bottom = Math.min(Math.max(0, panelDrag.sb - dy), Math.max(0, vh - ph - 8));
+        // 实测面板当前渲染尺寸,不与 CSS 互相追
+        const rect = panelEl.value ? panelEl.value.getBoundingClientRect() : { width: 440, height: vh * 0.64 };
+        S.panelPos.value.right = Math.min(Math.max(0, panelDrag.sr - dx), Math.max(0, vw - rect.width - 8));
+        S.panelPos.value.bottom = Math.min(Math.max(0, panelDrag.sb - dy), Math.max(0, vh - rect.height - 8));
       }
     }
     function onHeadUp() { panelDrag = null; }
@@ -165,12 +168,12 @@ const App = defineComponent({
     useEventListener(window, 'pointerup', onBallUp);
     useEventListener(window, 'pointermove', onHeadMove);
     useEventListener(window, 'pointerup', onHeadUp);
-    return { baseInput, visible, ballStyle, panelStyle, onBallDown, onBallMove, onBallUp, onHeadDown, onHeadMove, onHeadUp, onBaseChange, onSettingsBtn, onStop, panelOpen: S.panelOpen, connected: S.connected, clearBody: S.clearBody };
+    return { baseInput, panelEl, ballEl, visible, ballStyle, panelStyle, onBallDown, onBallMove, onBallUp, onHeadDown, onHeadMove, onHeadUp, onBaseChange, onSettingsBtn, onStop, panelOpen: S.panelOpen, connected: S.connected, clearBody: S.clearBody };
   },
   template: `
 <div>
-  <div id="lite-agent-ball" :style="ballStyle" @pointerdown="onBallDown">⚡</div>
-  <div id="lite-agent-panel" :class="{open: panelOpen}" :style="panelStyle">
+  <div id="lite-agent-ball" ref="ballEl" :style="ballStyle" @pointerdown="onBallDown">⚡</div>
+  <div id="lite-agent-panel" ref="panelEl" :class="{open: panelOpen}" :style="panelStyle">
     <div id="lite-agent-head" @pointerdown="onHeadDown">
       <span class="la-title">st-lite-agent</span>
       <span id="lite-agent-status" :class="connected ? 'ok' : ''"></span>
