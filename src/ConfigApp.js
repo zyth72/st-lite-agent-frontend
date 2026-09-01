@@ -68,6 +68,7 @@ const UpstreamCards = defineComponent({
     <div v-for="(p,i) in providers" :key="i" class="lcfg-card">
       <div class="lcfg-card-head">
         <span class="lcfg-card-icon">🔗</span><span class="lcfg-card-title">{{ p.name || '(新上游)' }}</span>
+        <LaButton class="lcfg-tonal" text="🧭 获取模型" @click="$emit('load', p)"/>
         <LaButton class="lcfg-danger" text="删除" @click="remove(i)"/>
       </div>
       <div class="lcfg-row"><span class="lcfg-label">名称</span><LaInput class="lcfg-input" v-model="p.name" placeholder="如 deepseek / 火山"/></div>
@@ -173,6 +174,7 @@ export default defineComponent({
     function removeProvider(i) { providers.value.splice(i, 1); }
 
     async function loadModels(p) {
+      if (!p.name || !p.baseurl) { tip.value = '请先填写该上游的名称与 Base URL'; tipKind.value = 'err'; return; }
       if (!p.key && !p.keyHint) { tip.value = '请先填入该上游的 API Key 再点获取模型'; tipKind.value = 'err'; return; }
       try {
         const r = await fetch(S.base.value + '/agent/config/load-models', {
@@ -180,8 +182,11 @@ export default defineComponent({
           body: JSON.stringify({ name: p.name, baseurl: p.baseurl, key: p.key }),
         });
         const j = await r.json();
-        if (j.unsupported) { p.models = []; tip.value = '该上游不支持自动获取,请手动添加模型'; tipKind.value = 'err'; }
-        else { p.models = j.models || []; tip.value = '已获取 ' + p.models.length + ' 个模型'; tipKind.value = 'ok'; }
+        if (j.unsupported) { p.models = []; tip.value = '该上游不支持自动获取,请手动添加模型'; tipKind.value = 'err'; return; }
+        p.models = j.models || [];
+        await saveUpstreams(); // 直接写 config.json 并热生效,不再依赖手动保存
+        tip.value = '已获取 ' + p.models.length + ' 个模型并写入 config';
+        tipKind.value = 'ok';
       } catch (e) { tip.value = '获取模型失败: ' + e.message; tipKind.value = 'err'; }
     }
 
@@ -232,10 +237,9 @@ export default defineComponent({
         </template>
 
         <template v-if="section==='upstreams'">
-          <UpstreamCards :providers="providers" @remove="removeProvider"/>
+          <UpstreamCards :providers="providers" @remove="removeProvider" @load="loadModels"/>
           <div class="lcfg-actions"><LaButton class="lcfg-tonal" text="+ 新增上游" @click="addProvider"/></div>
           <div class="lcfg-actions">
-            <LaButton class="lcfg-tonal" text="🧭 从上游获取模型" @click="loadModels(providers[0])"/>
             <LaButton text="💾 保存上游与密钥" @click="saveUpstreams"/>
           </div>
           <div class="lcfg-hint">密钥留空 = 保持 .env 现状;保存后热生效,无需重启服务。</div>
