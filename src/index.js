@@ -34,8 +34,8 @@ function addWandEntry() {
   if (!menu) { console.warn('[' + MODULE + '] 未找到扩展菜单,配置入口改为悬浮球 ⚙️'); return; }
   const entry = document.createElement('div');
   entry.id = 'lite-agent-wand-entry';
-  entry.className = 'list-group-item flex-container flexFlowColumn aligncenter';
-  entry.innerHTML = '<i class="fa-solid fa-bolt" style="color:#a8c8ff"></i><span>Agent 控制台</span>';
+  entry.className = 'list-group-item flex-container flexGap5 interactable';
+  entry.innerHTML = '<div class="fa-fw fa-solid fa-bolt extensionsMenuExtensionButton" style="color:#a8c8ff"></div><span>Agent 控制台</span>';
   entry.addEventListener('click', () => openConfig());
   menu.prepend(entry);
 }
