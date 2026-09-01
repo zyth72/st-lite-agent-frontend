@@ -89,8 +89,9 @@ async function pollOnce() {
       appendClean(stageId, kind, key, d.text);
       const done = /输出结束/.test(d.text);
       const failed = /输出结束 \(失败/.test(d.text);
+      const stopped = /输出结束 \(中止/.test(d.text);
       if (!statuses[stageId]) statuses[stageId] = failed ? 'failed' : 'running';
-      if (done) statuses[stageId] = failed ? 'failed' : 'done';
+      if (done) statuses[stageId] = failed ? 'failed' : (stopped ? 'stopped' : 'done');
     }
   } catch (e) {
     connected.value = false;

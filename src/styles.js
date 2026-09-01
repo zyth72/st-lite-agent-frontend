@@ -214,10 +214,12 @@ export function css() {
 .la-status-text.running { color: var(--md-run); background: rgba(245, 199, 126, 0.12); }
 .la-status-text.done { color: var(--md-ok); background: rgba(123, 219, 154, 0.10); }
 .la-status-text.failed { color: var(--md-error); background: rgba(242, 184, 181, 0.12); }
+.la-status-text.stopped { color: var(--md-outline); background: rgba(147, 143, 153, 0.14); }
 .la-step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--md-outline-variant); flex: none; }
 .la-step-dot.running { background: var(--md-run); box-shadow: 0 0 0 3px rgba(245, 199, 126, 0.14); animation: la-pulse 1.6s ease-in-out infinite; }
 .la-step-dot.done { background: var(--md-ok); box-shadow: 0 0 0 3px rgba(123, 219, 154, 0.14); }
 .la-step-dot.failed { background: var(--md-error); box-shadow: 0 0 0 3px rgba(242, 184, 181, 0.14); }
+.la-step-dot.stopped { background: var(--md-outline); box-shadow: 0 0 0 3px rgba(147, 143, 153, 0.14); }
 @keyframes la-pulse {
   0%, 100% { box-shadow: 0 0 0 3px rgba(245, 199, 126, 0.14); }
   50% { box-shadow: 0 0 0 6px rgba(245, 199, 126, 0.05); }

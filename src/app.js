@@ -23,7 +23,7 @@ const STAGE_ICON = {
   split: 'fa-scissors',
   state: 'fa-box-archive',
 };
-const STATUS_TEXT = { running: '运行中', done: '已完成', failed: '失败' };
+const STATUS_TEXT = { running: '运行中', done: '已完成', failed: '失败', stopped: '已停止' };
 function fmtLen(s) {
   const n = (s || '').length;
   if (!n) return '';
