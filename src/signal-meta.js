@@ -16,11 +16,8 @@ function stCtx() {
 function collectMeta() {
   const ctx = stCtx();
   const chat = (ctx && Array.isArray(ctx.chat)) ? ctx.chat : [];
-  const last = chat[chat.length - 1] || {};
-  const type = last.is_user ? 'new' : 'reroll';
-  const floor = chat.length; // 最后一条消息的楼层号(1-based)
-  const hidden = chat.map((m, i) => (m && m.is_hidden) ? i + 1 : null).filter(Boolean).join(',');
-  return { type, floor, hidden };
+  const floor = chat.length; // 最后一条消息的楼层号(1-based);追加/覆盖/删除同步全由服务端据此推导
+  return { floor };
 }
 
 // prompt 就绪:包装最后一条 user 消息
@@ -40,9 +37,7 @@ function onPromptReady(data) {
   if (sw) body = sw[1].trim();
   const meta = collectMeta();
   m.content = '<SignalMeta>\n'
-    + 'type: ' + meta.type + '\n'
     + 'floor: ' + meta.floor + '\n'
-    + (meta.hidden ? 'hidden: ' + meta.hidden + '\n' : '')
     + '</SignalMeta>\n'
     + '<Signal>\n' + body + '\n</Signal>';
 }
