@@ -12,6 +12,7 @@ function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').
 function md(text) { return marked.parse(text || '', { gfm: true, breaks: true }); }
 
 const STAGE_ICON = {
+  roleplay: 'fa-user-group',
   facts: 'fa-clipboard-list',
   parallel: 'fa-code-branch',
   relationships: 'fa-diagram-project',
@@ -41,8 +42,20 @@ const StageCard = defineComponent({
     });
     const status = computed(() => S.statuses[props.id] || '');
     const text = computed(() => S.stageText[props.id] || { reasoning: '', output: '' });
-    const stageIcon = computed(() => STAGE_ICON[props.id] || 'fa-gear');
+    // 子段(roleplay.凛)继承父段图标
+    const stageIcon = computed(() => STAGE_ICON[props.id]
+      || Object.keys(STAGE_ICON).filter((k) => props.id.startsWith(k + '.')).map((k) => STAGE_ICON[k])[0]
+      || 'fa-gear');
     const statusText = computed(() => STATUS_TEXT[status.value] || '');
+    // 显示名:主段用中文名;fan-out 子段 roleplay.凛 → 凛 · 居民扮演
+    const STAGE_NAME = { settlement: '空间结算', roleplay: '居民扮演', facts: '事实核验', reply: '通讯结算', draft: '草稿', review: '审稿', parallel: '并行播报', writer: '写作' };
+    const title = computed(() => {
+      if (STAGE_NAME[props.id]) return STAGE_NAME[props.id];
+      for (const [k, v] of Object.entries(STAGE_NAME)) {
+        if (props.id.startsWith(k + '.')) return props.id.slice(k.length + 1) + ' · ' + v;
+      }
+      return props.id;
+    });
     const reasonLen = computed(() => fmtLen(text.value.reasoning));
     const outLen = computed(() => fmtLen(text.value.output));
     const isJson = computed(() => stage.value.output === 'json');
@@ -84,14 +97,14 @@ const StageCard = defineComponent({
         else if (el.scrollTop !== m.top) el.scrollTop = m.top;
       }
     });
-    return { stage, text, sv, status, stageIcon, statusText, reasonLen, outLen, isJson, reasonHtml, outHtml, copy, toggleReason, toggleOut, toggleMd: S.toggleMd, reasonRef, outRef, onPreScroll };
+    return { stage, text, sv, status, stageIcon, statusText, title, reasonLen, outLen, isJson, reasonHtml, outHtml, copy, toggleReason, toggleOut, toggleMd: S.toggleMd, reasonRef, outRef, onPreScroll };
   },
   template: `
 <div class="la-group" :id="'la-group-'+stage.id" :class="{closed: sv.collapsed}">
   <div class="la-step-head" @click="sv.collapsed=!sv.collapsed">
     <span class="la-step-dot" :id="'la-dot-'+stage.id" :class="status"></span>
     <i class="fa-solid la-stage-icon" :class="stageIcon"></i>
-    <span class="la-step-title" :id="'la-label-'+stage.id">{{ stage.id }}</span>
+    <span class="la-step-title" :id="'la-label-'+stage.id">{{ title }}</span>
     <span v-if="statusText" class="la-status-text" :class="status">{{ statusText }}</span>
   </div>
   <template v-if="!sv.collapsed">

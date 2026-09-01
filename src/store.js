@@ -23,8 +23,15 @@ export const stageText = reactive({});        // stageId -> {reasoning, output}
 export const stageView = reactive({});        // stageId -> {md, mode, reasonOpen, outOpen, collapsed}
 
 export function visibleStageIds() {
-  // 按服务端 stageMeta(即流水线执行顺序)排序,而非落盘文件的遍历顺序
-  return stages.value.filter((s) => statuses[s.id]).map((s) => s.id);
+  // 按服务端 stageMeta(流水线顺序)排序;fan-out 子段(roleplay.凛 等)展开为独立卡挂在父段位
+  const keys = Object.keys(statuses);
+  const out = [];
+  for (const s of stages.value) {
+    const subs = keys.filter((k) => k.startsWith(s.id + '.'));
+    if (subs.length) { out.push(...subs); continue; }
+    if (statuses[s.id]) out.push(s.id);
+  }
+  return out;
 }
 
 const POLL_MS = 1500;
@@ -75,8 +82,8 @@ async function pollOnce() {
 
     for (const f of latest.files || []) {
       if (!/\.(reasoning|output)\.txt$/.test(f)) continue;
-      const stageId = f.split('.')[0];
-      if (!metas.some((s) => s.id === stageId)) continue;
+      const stageId = f.replace(/\.(reasoning|output)\.txt$/, ''); // 完整前缀:roleplay.凛
+      if (!metas.some((s) => s.id === stageId || stageId.startsWith(s.id + '.'))) continue;
       const kind = f.endsWith('.reasoning.txt') ? 'reasoning' : 'output';
       const key = latest.id + '/' + f;
       const r2 = await fetch(base.value + '/agent/steps/' + encodeURIComponent(latest.id) + '/'
