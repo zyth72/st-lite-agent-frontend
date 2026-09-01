@@ -16,7 +16,12 @@ function stCtx() {
 function collectMeta() {
   const ctx = stCtx();
   const chat = (ctx && Array.isArray(ctx.chat)) ? ctx.chat : [];
-  const floor = chat.length; // 最后一条消息的楼层号(1-based);追加/覆盖/删除同步全由服务端据此推导
+  // floor = 最后一条 user(Signal)消息的楼层号(1-based)——新消息与重新生成两种场景语义统一,
+  // 服务端据此单规则对齐:≥floor 全作废(删楼重发/编辑/重roll 一视同仁)
+  let floor = chat.length;
+  for (let i = chat.length - 1; i >= 0; i--) {
+    if (chat[i] && chat[i].is_user) { floor = i + 1; break; }
+  }
   return { floor };
 }
 
