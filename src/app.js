@@ -125,7 +125,7 @@ const StageCard = defineComponent({
       <div class="la-card" v-show="sv.outOpen">
         <div class="la-card-head">
           <span>正文</span>
-          <LaButton v-if="isJson" class="la-md-toggle" :text="sv.mode==='json' ? 'MD' : 'JSON'" @click="toggleMd(stage.id)"/>
+          <LaButton v-if="isJson" class="la-md-toggle" :class="{disabled: status!=='done'}" :text="sv.mode==='json' ? 'MD' : 'JSON'" @click="status==='done' && toggleMd(stage.id)"/>
           <LaButton class="la-copy" text="复制" @click="copy('output')"/>
         </div>
         <pre ref="outRef" class="la-pre" :class="{'markdown-body': !(isJson && sv.mode==='json')}" @scroll.passive="onPreScroll('out', $event)" v-html="outHtml"></pre>

@@ -350,6 +350,8 @@ export function css() {
   padding: 2px 10px !important;
 }
 #lite-agent-body button.la-md-toggle:hover { background: rgba(168, 200, 255, 0.22) !important; border-color: var(--md-primary) !important; }
+#lite-agent-body button.la-md-toggle.disabled { opacity: .38; cursor: not-allowed; }
+#lite-agent-body button.la-md-toggle.disabled:hover { background: rgba(168, 200, 255, 0.12) !important; border-color: rgba(168, 200, 255, 0.35) !important; }
 
 /* ===== 设置面板组件(M3 分组卡片) ===== */
 .la-dim { color: var(--md-outline); font-size: 12px; padding: 12px; }
