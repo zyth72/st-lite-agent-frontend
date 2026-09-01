@@ -14,6 +14,7 @@ import LaSelect from './components/LaSelect.js';
 import LaToggleItem from './components/LaToggleItem.js';
 import LaButton from './components/LaButton.js';
 import { connect, base, openConfig } from './store.js';
+import { installSignalMeta } from './signal-meta.js';
 
 // 第三方扩展路径比内置多一层目录;src/ 又比根多一层,故各再退一级
 const IS_THIRD_PARTY = typeof location !== 'undefined' && location.pathname.includes('/extensions/third-party/');
@@ -61,6 +62,7 @@ function boot() {
   cfgApp.mount(cfgRoot);
 
   addWandEntry();
+  installSignalMeta();
   connect();
   console.log('[' + MODULE + '] Vue 面板与配置界面已就绪,接口基址 ' + base.value);
 }
