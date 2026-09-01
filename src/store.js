@@ -27,6 +27,7 @@ export function visibleStageIds() {
   const keys = Object.keys(statuses);
   const out = [];
   for (const s of stages.value) {
+    if (s.type && s.type !== 'llm') continue; // builtin 段不进面板(毫秒级内部步骤;日志仍有)
     const subs = keys.filter((k) => k.startsWith(s.id + '.'));
     if (subs.length) { out.push(...subs); continue; }
     if (statuses[s.id]) out.push(s.id);
