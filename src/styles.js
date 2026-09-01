@@ -169,7 +169,8 @@ export function css() {
 #lite-agent-body button.la-btn-tonal:hover { background: #544e63 !important; }
 
 /* ===== 面板体与滚动条 ===== */
-#lite-agent-body { flex: 1; overflow-y: auto; min-height: 0; padding: 12px 14px 20px; }
+#lite-agent-body { flex: 1; overflow-y: auto; min-height: 0; }
+#lite-agent-content { padding: 12px 14px 20px; }
 #lite-agent-body::-webkit-scrollbar { width: 8px; height: 8px; }
 #lite-agent-body::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 4px; }
 #lite-agent-body::-webkit-scrollbar-thumb:hover { background: #565266; }
@@ -200,7 +201,7 @@ export function css() {
 }
 .la-group.closed .la-step-head::after { transform: rotate(45deg); }
 /* 单卡整体折叠:折叠后只留标题行 */
-.la-group.closed > details { display: none; }
+.la-group.closed > .la-sec { display: none; }
 .la-step-title { font-size: 13.5px; font-weight: 600; color: var(--md-on-surface); letter-spacing: .2px; }
 .la-stage-icon { font-size: 12.5px; width: 16px; text-align: center; color: var(--md-on-surface-variant); opacity: .9; }
 .la-status-text {
@@ -225,10 +226,10 @@ export function css() {
   50% { box-shadow: 0 0 0 6px rgba(245, 199, 126, 0.05); }
 }
 
-/* ===== 折叠区(M3 化 details/summary) ===== */
-.la-group details { margin-top: 6px; }
-.la-group details[open] { margin-bottom: 2px; }
-.la-group summary {
+/* ===== 折叠区(纯 div+v-show;不用 details,避免关闭态内容溢出渲染的布局僵尸) ===== */
+.la-sec { margin-top: 6px; }
+.la-sec.open { margin-bottom: 2px; }
+.la-sec-head {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -240,12 +241,10 @@ export function css() {
   color: var(--md-on-surface-variant);
   cursor: pointer;
   user-select: none;
-  list-style: none;
   transition: background .18s ease, color .18s ease;
 }
-.la-group summary::-webkit-details-marker { display: none; }
-.la-group summary:hover { background: var(--md-state-hover); color: var(--md-on-surface); }
-.la-group summary::after {
+.la-sec-head:hover { background: var(--md-state-hover); color: var(--md-on-surface); }
+.la-sec-head::after {
   content: '';
   margin-left: auto;
   width: 8px; height: 8px;
@@ -254,11 +253,11 @@ export function css() {
   transform: rotate(45deg);
   transition: transform .2s ease;
 }
-.la-group details[open] > summary::after { transform: rotate(-135deg); }
+.la-sec.open > .la-sec-head::after { transform: rotate(-135deg); }
 .la-sum-icon { font-size: 12px; width: 16px; text-align: center; color: var(--md-outline); transition: color .18s ease; }
-.la-group summary:hover .la-sum-icon { color: var(--md-primary); }
+.la-sec-head:hover .la-sum-icon { color: var(--md-primary); }
 .la-sum-meta { color: var(--md-outline); font-size: 11px; font-weight: 400; letter-spacing: .02em; }
-.la-group summary:hover .la-sum-meta { color: var(--md-on-surface-variant); }
+.la-sec-head:hover .la-sum-meta { color: var(--md-on-surface-variant); }
 
 /* ===== 内容块(嵌套 lower 层级) ===== */
 .la-reason-body, .la-card {
@@ -418,7 +417,7 @@ export function css() {
   .la-pre { font-size: 13.5px; line-height: 1.75; }
   .la-out.la-prose .la-pre { font-size: 16.5px; line-height: 2; }
   .la-card-head { font-size: 12px; }
-  .la-group summary { font-size: 14px; padding: 8px 10px; }
+  .la-sec-head { font-size: 14px; padding: 8px 10px; }
   .la-copy { font-size: 12px; padding: 3px 12px; }
 }
 

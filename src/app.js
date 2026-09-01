@@ -55,7 +55,7 @@ const StageCard = defineComponent({
     const copy = (kind) => { const v = kind === 'reasoning' ? text.value.reasoning : text.value.output; navigator.clipboard && navigator.clipboard.writeText(v); };
     // 展开较高段落时,把段顶对齐到面板顶部,阅读动线:段顶可见 → 滚内窗 → 滚链接到面板
     const expandIntoView = (e) => {
-      const d = e.currentTarget.closest('details');
+      const d = e.currentTarget.closest('.la-sec');
       nextTick(() => {
         const bodyEl = document.getElementById('lite-agent-body');
         if (!d || !bodyEl) return;
@@ -95,29 +95,29 @@ const StageCard = defineComponent({
     <span v-if="statusText" class="la-status-text" :class="status">{{ statusText }}</span>
   </div>
   <template v-if="!sv.collapsed">
-    <details class="la-reason" :id="'la-reason-'+stage.id" :open="sv.reasonOpen" v-if="text.reasoning">
-      <summary @click.prevent="toggleReason($event)">
+    <div class="la-sec" :class="{open: sv.reasonOpen}" v-if="text.reasoning">
+      <div class="la-sec-head" @click="toggleReason($event)">
         <i class="fa-solid fa-brain la-sum-icon"></i>
         <span>思维链</span>
         <span v-if="reasonLen" class="la-sum-meta">{{ reasonLen }}</span>
-      </summary>
-      <div class="la-reason-body"><pre ref="reasonRef" class="la-pre markdown-body" :id="'la-reason-'+stage.id" @scroll.passive="onPreScroll('reason', $event)" v-html="reasonHtml"></pre></div>
-    </details>
-    <details class="la-out" :id="'la-out-'+stage.id" :class="{prose: stage.output==='stream'}" :open="sv.outOpen" v-if="text.output">
-      <summary @click.prevent="toggleOut($event)">
+      </div>
+      <div class="la-reason-body" v-show="sv.reasonOpen"><pre ref="reasonRef" class="la-pre markdown-body" :id="'la-reason-pre-'+stage.id" @scroll.passive="onPreScroll('reason', $event)" v-html="reasonHtml"></pre></div>
+    </div>
+    <div class="la-sec" :class="{open: sv.outOpen, prose: stage.output==='stream'}" v-if="text.output">
+      <div class="la-sec-head" @click="toggleOut($event)">
         <i class="fa-solid fa-file-lines la-sum-icon"></i>
         <span>正文</span>
         <span v-if="outLen" class="la-sum-meta">{{ outLen }}</span>
-      </summary>
-      <div class="la-card">
+      </div>
+      <div class="la-card" v-show="sv.outOpen">
         <div class="la-card-head">
           <span>正文</span>
           <LaButton v-if="isJson" class="la-md-toggle" :text="sv.mode==='json' ? 'MD' : 'JSON'" @click="toggleMd(stage.id)"/>
           <LaButton class="la-copy" text="复制" @click="copy('output')"/>
         </div>
-        <pre ref="outRef" class="la-pre" :id="'la-out-'+stage.id" :class="{'markdown-body': !(isJson && sv.mode==='json')}" @scroll.passive="onPreScroll('out', $event)" v-html="outHtml"></pre>
+        <pre ref="outRef" class="la-pre" :class="{'markdown-body': !(isJson && sv.mode==='json')}" @scroll.passive="onPreScroll('out', $event)" v-html="outHtml"></pre>
       </div>
-    </details>
+    </div>
   </template>
 </div>
 `
@@ -180,8 +180,10 @@ const App = defineComponent({
       <LaButton text="⚙️" @click="onSettingsBtn"/>
     </div>
     <div id="lite-agent-body">
-      <div v-if="visible.length===0" class="la-dim la-pending-placeholder">等待 agent 执行…</div>
-      <StageCard v-for="id in visible" :key="id" :id="id"/>
+      <div id="lite-agent-content">
+        <div v-if="visible.length===0" class="la-dim la-pending-placeholder">等待 agent 执行…</div>
+        <StageCard v-for="id in visible" :key="id" :id="id"/>
+      </div>
     </div>
   </div>
 </div>
