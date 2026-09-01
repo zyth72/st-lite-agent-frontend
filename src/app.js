@@ -53,14 +53,16 @@ const StageCard = defineComponent({
       || Object.keys(STAGE_ICON).filter((k) => props.id.startsWith(k + '.')).map((k) => STAGE_ICON[k])[0]
       || 'fa-gear');
     const statusText = computed(() => STATUS_TEXT[status.value] || '');
-    // 显示名:主段用中文名;fan-out 子段 roleplay.凛 → 凛 · 居民扮演
-    const STAGE_NAME = { settlement: '空间结算', roleplay: '居民扮演', facts: '事实核验', reply: '通讯结算', draft: '草稿', review: '审稿', parallel: '并行播报', writer: '写作' };
+    // 显示名:服务端 agent.json 段 label 优先;fan-out 子段 roleplay.凛 → 凛 · 父段label
+    const parentLabel = (id) => {
+      const s = S.stages.value.find((x) => id === x.id || id.startsWith(x.id + '.'));
+      return (s && s.label) || null;
+    };
     const title = computed(() => {
-      if (STAGE_NAME[props.id]) return STAGE_NAME[props.id];
-      for (const [k, v] of Object.entries(STAGE_NAME)) {
-        if (props.id.startsWith(k + '.')) return props.id.slice(k.length + 1) + ' · ' + v;
-      }
-      return props.id;
+      const lab = parentLabel(props.id);
+      if (!lab) return props.id;
+      const dot = props.id.indexOf('.');
+      return dot > 0 ? props.id.slice(dot + 1) + ' · ' + lab : lab;
     });
     const reasonLen = computed(() => fmtLen(text.value.reasoning));
     const outLen = computed(() => fmtLen(text.value.output));
