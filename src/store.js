@@ -14,7 +14,8 @@ export const ballPos = useLocalStorage('st-lite-agent-ball-pos', { right: 18, bo
 export const panelPos = useLocalStorage('st-lite-agent-panel-pos', { right: 18, bottom: 76 });
 
 export const panelOpen = ref(false);
-export const view = ref('stages');            // 'stages' | 'settings'
+export const view = ref('stages');            // 'stages' | 'settings'(旧内嵌设置,保留兼容)
+export const configOpen = ref(false);         // 全屏配置界面(扩展菜单入口)
 export const connected = ref(false);
 export const stages = ref([]);                // llm 清单 [{id,type,output}]
 export const statuses = reactive({});         // stageId -> running/done/failed
@@ -111,8 +112,10 @@ export function resetData() {
 }
 
 export function togglePanel() { panelOpen.value = !panelOpen.value; }
-export function openSettings() { view.value = 'settings'; }
-export function closeSettings() { view.value = 'stages'; }
+export function openConfig() { configOpen.value = true; }
+export function closeConfig() { configOpen.value = false; }
+export function openSettings() { view.value = 'settings'; openConfig(); } // 兼容旧入口:⚙️ 直接进全屏配置
+export function closeSettings() { view.value = 'stages'; closeConfig(); }
 export function clearBody() { resetData(); }
 export function setBase(v) { base.value = v || 'http://127.0.0.1:6789'; connect(); }
 

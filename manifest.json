@@ -3,10 +3,10 @@
   "loading_order": 10,
   "requires": [],
   "optional": [],
-  "js": "index.js",
+  "js": "src/index.js",
   "css": "",
   "author": "zyth",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "homePage": "",
   "auto_update": false
 }

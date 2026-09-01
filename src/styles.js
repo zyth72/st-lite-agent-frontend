@@ -351,6 +351,166 @@ export function css() {
   .la-group summary { font-size: 14px; padding: 8px 10px; }
   .la-copy { font-size: 12px; padding: 3px 12px; }
 }
+
+/* ===== 全屏配置界面(扩展菜单入口,M3 全屏抽屉) ===== */
+#lite-agent-config {
+  --md-surface: #141218;
+  --md-surface-lowest: #0f0d13;
+  --md-surface-low: #1d1b20;
+  --md-surface-container: #211f26;
+  --md-surface-high: #2b2930;
+  --md-surface-highest: #36343b;
+  --md-on-surface: #e6e1e5;
+  --md-on-surface-variant: #cac4d0;
+  --md-outline: #938f99;
+  --md-outline-variant: #49454f;
+  --md-primary: #a8c8ff;
+  --md-on-primary: #102f5c;
+  --md-primary-container: #3e4f78;
+  --md-on-primary-container: #d9e3ff;
+  --md-secondary-container: #4a4458;
+  --md-on-secondary-container: #e8def8;
+  --md-error: #f2b8b5;
+  --md-ok: #7bdb9a;
+  --md-state-hover: rgba(230, 225, 229, 0.08);
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: none;
+  background: rgba(8, 7, 10, 0.7);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--md-on-surface);
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+}
+#lite-agent-config.open { display: block; }
+#lite-agent-config .lcfg-shell {
+  position: absolute;
+  inset: 3vh 4vw;
+  display: flex;
+  flex-direction: column;
+  background: rgba(20, 18, 24, 0.98);
+  border: 1px solid rgba(147, 143, 153, 0.14);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+#lite-agent-config .lcfg-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 22px;
+  border-bottom: 1px solid rgba(147, 143, 153, 0.14);
+}
+#lite-agent-config .lcfg-brand { font-size: 15px; font-weight: 600; }
+#lite-agent-config .lcfg-brand::before { content: '⚡'; margin-right: 8px; color: var(--md-primary); }
+#lite-agent-config .lcfg-close { margin-left: auto; }
+#lite-agent-config .lcfg-body { flex: 1; display: flex; min-height: 0; }
+#lite-agent-config .lcfg-nav {
+  width: 208px; flex: none;
+  border-right: 1px solid rgba(147, 143, 153, 0.12);
+  padding: 14px 10px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+#lite-agent-config .lcfg-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 12px;
+  font-size: 13.5px; color: var(--md-on-surface-variant);
+  cursor: pointer; user-select: none;
+  transition: background .18s ease, color .18s ease;
+}
+#lite-agent-config .lcfg-nav-item:hover { background: var(--md-state-hover); color: var(--md-on-surface); }
+#lite-agent-config .lcfg-nav-item.active {
+  background: var(--md-primary-container); color: var(--md-on-primary-container); font-weight: 600;
+}
+#lite-agent-config .lcfg-nav-icon { width: 20px; text-align: center; }
+#lite-agent-config .lcfg-content { flex: 1; overflow-y: auto; padding: 20px 26px 30px; }
+#lite-agent-config .lcfg-content::-webkit-scrollbar { width: 8px; }
+#lite-agent-config .lcfg-content::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 4px; }
+#lite-agent-config .lcfg-section-title { font-size: 17px; font-weight: 600; }
+#lite-agent-config .lcfg-section-hint { font-size: 12px; color: var(--md-outline); margin: 3px 0 16px; }
+
+#lite-agent-config .lcfg-cards { display: flex; flex-direction: column; gap: 12px; }
+#lite-agent-config .lcfg-card {
+  background: var(--md-surface-high); border-radius: 16px; padding: 12px 18px 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+}
+#lite-agent-config .lcfg-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+#lite-agent-config .lcfg-card-icon { font-size: 15px; }
+#lite-agent-config .lcfg-card-title { font-weight: 600; font-size: 13.5px; }
+#lite-agent-config .lcfg-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+#lite-agent-config .lcfg-row + .lcfg-row { border-top: 1px solid rgba(147, 143, 153, 0.10); }
+#lite-agent-config .lcfg-label { flex: 0 0 96px; color: var(--md-on-surface-variant); font-size: 12.5px; }
+#lite-agent-config .lcfg-input { flex: 1; min-width: 0; width: auto !important; }
+#lite-agent-config .lcfg-toggles { display: flex; gap: 16px; }
+#lite-agent-config .lcfg-nums { display: flex; gap: 18px; flex-wrap: wrap; }
+#lite-agent-config .lcfg-num { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--md-outline); }
+#lite-agent-config .lcfg-num-input { width: 120px !important; }
+#lite-agent-config .lcfg-actions { display: flex; gap: 10px; margin-top: 14px; }
+#lite-agent-config .lcfg-hint { font-size: 11.5px; color: var(--md-outline); }
+#lite-agent-config .lcfg-tip { margin-top: 14px; font-size: 12.5px; border-radius: 10px; padding: 9px 14px; }
+#lite-agent-config .lcfg-tip.ok { background: rgba(123, 219, 154, 0.12); color: var(--md-ok); }
+#lite-agent-config .lcfg-tip.err { background: rgba(242, 184, 181, 0.12); color: var(--md-error); }
+#lite-agent-config .lcfg-models { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1; }
+#lite-agent-config .lcfg-chip {
+  background: var(--md-surface-highest); border-radius: 8px; padding: 3px 9px;
+  font-size: 12px; display: inline-flex; gap: 7px; align-items: center; color: var(--md-on-surface-variant);
+}
+#lite-agent-config .lcfg-chip-x { cursor: pointer; color: var(--md-error); font-style: normal; font-weight: 700; }
+#lite-agent-config .lcfg-chip-x:hover { color: var(--md-on-surface); }
+#lite-agent-config .lcfg-chip-input { width: 170px !important; font-size: 12px !important; }
+#lite-agent-config .lcfg-danger { color: var(--md-error) !important; margin-left: auto; }
+#lite-agent-config .lcfg-status { font-size: 12.5px; color: var(--md-outline); }
+#lite-agent-config .lcfg-status.ok { color: var(--md-ok); font-weight: 600; }
+
+/* 原生控件覆盖(config 根下,压过 ST 全局主题) */
+#lite-agent-config input[type=text],
+#lite-agent-config input[type=password],
+#lite-agent-config input[type=number],
+#lite-agent-config select {
+  background: var(--md-surface-highest) !important;
+  border: 1px solid transparent !important;
+  color: var(--md-on-surface) !important;
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  font-family: inherit !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+#lite-agent-config input::placeholder { color: var(--md-outline) !important; }
+#lite-agent-config input:focus, #lite-agent-config select:focus {
+  border-color: var(--md-primary) !important;
+  box-shadow: 0 0 0 1px var(--md-primary) !important;
+}
+#lite-agent-config input[type=number] { width: 120px !important; }
+#lite-agent-config input[type=checkbox] { accent-color: var(--md-primary) !important; width: 16px !important; height: 16px !important; }
+#lite-agent-config button {
+  background: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+  border: none !important;
+  border-radius: 20px !important;
+  padding: 7px 16px !important;
+  font-size: 13px !important;
+  font-family: inherit !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+#lite-agent-config button:hover { background: #93b6f2 !important; }
+#lite-agent-config button.lcfg-tonal { background: var(--md-secondary-container) !important; color: var(--md-on-secondary-container) !important; }
+#lite-agent-config button.lcfg-tonal:hover { background: #544e63 !important; }
+#lite-agent-config button.lcfg-danger { background: transparent !important; color: var(--md-error) !important; }
+#lite-agent-config button.lcfg-danger:hover { background: var(--md-state-hover) !important; }
+#lite-agent-config button.lcfg-close {
+  background: transparent !important; color: var(--md-on-surface-variant) !important;
+  border: 1px solid var(--md-outline-variant) !important;
+}
+#lite-agent-config button.lcfg-close:hover { color: var(--md-on-surface) !important; background: var(--md-state-hover) !important; }
+
+@media (max-width: 768px) {
+  #lite-agent-config .lcfg-shell { inset: 0; border-radius: 0; }
+  #lite-agent-config .lcfg-nav { width: 150px; }
+}
 `;
   document.head.appendChild(s);
 }
