@@ -119,9 +119,9 @@ const App = defineComponent({
       if (Math.abs(dx) + Math.abs(dy) > 3) {
         panelDrag.moved = true;
         const vw = innerWidth, vh = innerHeight;
-        const pw = Math.min(520, vw);
+        const pw = Math.min(440, vw);
         // 高度与 CSS 一致(桌面 min(72vh,760) / 移动 min(82vh,720)),保证固定高度且拖不出视口
-        const ph = vw <= 768 ? Math.min(vh * 0.82, 720) : Math.min(vh * 0.72, 760);
+        const ph = vw <= 768 ? Math.min(vh * 0.82, 720) : Math.min(vh * 0.64, 680);
         S.panelPos.value.right = Math.min(Math.max(0, panelDrag.sr - dx), Math.max(0, vw - pw - 8));
         S.panelPos.value.bottom = Math.min(Math.max(0, panelDrag.sb - dy), Math.max(0, vh - ph - 8));
       }

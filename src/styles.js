@@ -50,9 +50,9 @@ export function css() {
   flex-direction: column;
   z-index: 2147483646;
   overflow: hidden;
-  width: 520px;
-  max-width: 520px;
-  height: min(72vh, 760px);
+  width: 440px;
+  max-width: 440px;
+  height: min(64vh, 680px);
   max-height: 92vh;
   background: rgba(20, 18, 24, 0.96);
   -webkit-backdrop-filter: blur(18px);
@@ -136,7 +136,7 @@ export function css() {
   border-color: var(--md-primary) !important;
   box-shadow: 0 0 0 1px var(--md-primary) !important;
 }
-#lite-agent-head input[type=text] { width: 150px !important; flex: 0 1 auto; }
+#lite-agent-head input[type=text] { width: 120px !important; flex: 0 1 auto; }
 #lite-agent-panel input[type=checkbox] {
   accent-color: var(--md-primary) !important;
   width: 16px !important; height: 16px !important; cursor: pointer; margin: 0;
