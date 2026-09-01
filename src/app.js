@@ -3,7 +3,7 @@
  * 状态来自 store.js;基础控件用全局组件 LaInput/LaSelect/LaToggleItem/LaButton;
  * 样式复用现有 M3 class;marked 渲染正文/思维链。
  */
-import { defineComponent, ref, computed } from './lib/vue.esm-browser.prod.js';
+import { defineComponent, ref, computed, nextTick } from './lib/vue.esm-browser.prod.js';
 import { marked } from './lib/marked.esm.js';
 import { useEventListener } from './hooks.js';
 import * as S from './store.js';
@@ -53,7 +53,20 @@ const StageCard = defineComponent({
       return md(text.value.output);
     });
     const copy = (kind) => { const v = kind === 'reasoning' ? text.value.reasoning : text.value.output; navigator.clipboard && navigator.clipboard.writeText(v); };
-    return { stage, text, sv, status, stageIcon, statusText, reasonLen, outLen, isJson, reasonHtml, outHtml, copy, toggleMd: S.toggleMd };
+    // 展开较高段落时,把段顶对齐到面板顶部,阅读动线:段顶可见 → 滚内窗 → 滚链接到面板
+    const expandIntoView = (e) => {
+      const d = e.currentTarget.closest('details');
+      nextTick(() => {
+        const bodyEl = document.getElementById('lite-agent-body');
+        if (!d || !bodyEl) return;
+        if (d.offsetHeight <= bodyEl.clientHeight * 0.5) return; // 短段落不跳动
+        const br = bodyEl.getBoundingClientRect(), dr = d.getBoundingClientRect();
+        bodyEl.scrollTo({ top: bodyEl.scrollTop + dr.top - br.top - 6, behavior: 'smooth' });
+      });
+    };
+    const toggleReason = (e) => { sv.value.reasonOpen = !sv.value.reasonOpen; if (sv.value.reasonOpen) expandIntoView(e); };
+    const toggleOut = (e) => { sv.value.outOpen = !sv.value.outOpen; if (sv.value.outOpen) expandIntoView(e); };
+    return { stage, text, sv, status, stageIcon, statusText, reasonLen, outLen, isJson, reasonHtml, outHtml, copy, toggleReason, toggleOut, toggleMd: S.toggleMd };
   },
   template: `
 <div class="la-group" :id="'la-group-'+stage.id" :class="{closed: sv.collapsed}">
@@ -65,7 +78,7 @@ const StageCard = defineComponent({
   </div>
   <template v-if="!sv.collapsed">
     <details class="la-reason" :id="'la-reason-'+stage.id" :open="sv.reasonOpen" v-if="text.reasoning">
-      <summary @click.prevent="sv.reasonOpen=!sv.reasonOpen">
+      <summary @click.prevent="toggleReason($event)">
         <i class="fa-solid fa-brain la-sum-icon"></i>
         <span>思维链</span>
         <span v-if="reasonLen" class="la-sum-meta">{{ reasonLen }}</span>
@@ -73,7 +86,7 @@ const StageCard = defineComponent({
       <div class="la-reason-body"><pre class="la-pre markdown-body" :id="'la-reason-'+stage.id" v-html="reasonHtml"></pre></div>
     </details>
     <details class="la-out" :id="'la-out-'+stage.id" :class="{prose: stage.output==='stream'}" :open="sv.outOpen" v-if="text.output">
-      <summary @click.prevent="sv.outOpen=!sv.outOpen">
+      <summary @click.prevent="toggleOut($event)">
         <i class="fa-solid fa-file-lines la-sum-icon"></i>
         <span>正文</span>
         <span v-if="outLen" class="la-sum-meta">{{ outLen }}</span>

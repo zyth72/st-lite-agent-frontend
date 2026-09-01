@@ -277,8 +277,13 @@ export function css() {
   line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-all;
+  max-height: 32vh;
+  overflow-y: auto;
+  overscroll-behavior: auto;
   color: var(--md-on-surface-variant);
 }
+.la-pre::-webkit-scrollbar { width: 6px; }
+.la-pre::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 3px; }
 .la-pre blockquote { margin: 0; padding: 2px 0 2px 10px; border-left: 3px solid rgba(168, 200, 255, 0.3); color: var(--md-on-surface-variant); }
 
 /* ===== markdown 主题适配(github-markdown-css dark,vendor 在 lib/)=====
