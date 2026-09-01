@@ -3,7 +3,7 @@
  * 状态来自 store.js;基础控件用全局组件 LaInput/LaSelect/LaToggleItem/LaButton;
  * 样式复用现有 M3 class;marked 渲染正文/思维链。
  */
-import { defineComponent, ref, computed, nextTick } from './lib/vue.esm-browser.prod.js';
+import { defineComponent, ref, computed, nextTick, onUpdated } from './lib/vue.esm-browser.prod.js';
 import { marked } from './lib/marked.esm.js';
 import { useEventListener } from './hooks.js';
 import * as S from './store.js';
@@ -66,7 +66,25 @@ const StageCard = defineComponent({
     };
     const toggleReason = (e) => { sv.value.reasonOpen = !sv.value.reasonOpen; if (sv.value.reasonOpen) expandIntoView(e); };
     const toggleOut = (e) => { sv.value.outOpen = !sv.value.outOpen; if (sv.value.outOpen) expandIntoView(e); };
-    return { stage, text, sv, status, stageIcon, statusText, reasonLen, outLen, isJson, reasonHtml, outHtml, copy, toggleReason, toggleOut, toggleMd: S.toggleMd };
+    // 流式阶段每次轮询都会 v-html 替换正文,内层 scrollTop 会被重置:
+    // 记住滚动位置(在底部则自动跟流),更新后恢复,否则长流永远"滑不到底"。
+    const reasonRef = ref(null);
+    const outRef = ref(null);
+    const scrollMem = { reason: { top: 0, atEnd: false }, out: { top: 0, atEnd: false } };
+    function onPreScroll(kind, e) {
+      const el = e.target, m = scrollMem[kind];
+      m.top = el.scrollTop;
+      m.atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+    }
+    onUpdated(() => {
+      for (const [kind, el] of [['reason', reasonRef.value], ['out', outRef.value]]) {
+        if (!el) continue;
+        const m = scrollMem[kind];
+        if (m.atEnd) el.scrollTop = el.scrollHeight;
+        else if (el.scrollTop !== m.top) el.scrollTop = m.top;
+      }
+    });
+    return { stage, text, sv, status, stageIcon, statusText, reasonLen, outLen, isJson, reasonHtml, outHtml, copy, toggleReason, toggleOut, toggleMd: S.toggleMd, reasonRef, outRef, onPreScroll };
   },
   template: `
 <div class="la-group" :id="'la-group-'+stage.id" :class="{closed: sv.collapsed}">
@@ -83,7 +101,7 @@ const StageCard = defineComponent({
         <span>思维链</span>
         <span v-if="reasonLen" class="la-sum-meta">{{ reasonLen }}</span>
       </summary>
-      <div class="la-reason-body"><pre class="la-pre markdown-body" :id="'la-reason-'+stage.id" v-html="reasonHtml"></pre></div>
+      <div class="la-reason-body"><pre ref="reasonRef" class="la-pre markdown-body" :id="'la-reason-'+stage.id" @scroll.passive="onPreScroll('reason', $event)" v-html="reasonHtml"></pre></div>
     </details>
     <details class="la-out" :id="'la-out-'+stage.id" :class="{prose: stage.output==='stream'}" :open="sv.outOpen" v-if="text.output">
       <summary @click.prevent="toggleOut($event)">
@@ -97,7 +115,7 @@ const StageCard = defineComponent({
           <LaButton v-if="isJson" class="la-md-toggle" :text="sv.mode==='json' ? 'MD' : 'JSON'" @click="toggleMd(stage.id)"/>
           <LaButton class="la-copy" text="复制" @click="copy('output')"/>
         </div>
-        <pre class="la-pre" :id="'la-out-'+stage.id" :class="{'markdown-body': !(isJson && sv.mode==='json')}" v-html="outHtml"></pre>
+        <pre ref="outRef" class="la-pre" :id="'la-out-'+stage.id" :class="{'markdown-body': !(isJson && sv.mode==='json')}" @scroll.passive="onPreScroll('out', $event)" v-html="outHtml"></pre>
       </div>
     </details>
   </template>
