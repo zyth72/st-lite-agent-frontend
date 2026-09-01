@@ -3,7 +3,7 @@
  * 状态来自 store.js;基础控件用全局组件 LaInput/LaSelect/LaToggleItem/LaButton;
  * 样式复用现有 M3 class;marked 渲染正文/思维链。
  */
-import { defineComponent, ref, computed, nextTick, onUpdated } from './lib/vue.esm-browser.prod.js';
+import { defineComponent, ref, computed, nextTick, onUpdated, watch } from './lib/vue.esm-browser.prod.js';
 import { marked } from './lib/marked.esm.js';
 import { useEventListener } from './hooks.js';
 import * as S from './store.js';
@@ -41,6 +41,12 @@ const StageCard = defineComponent({
       return x;
     });
     const status = computed(() => S.statuses[props.id] || '');
+    // 运行中自动展开思维链(工具循环/流式过程可见);用户手动收起后尊重手动
+    const autoExpanded = { done: false };
+    watch(status, (v) => {
+      if (v === 'running' && !autoExpanded.done) { sv.value.reasonOpen = true; }
+      if (v === 'done' || v === 'failed') autoExpanded.done = true;
+    });
     const text = computed(() => S.stageText[props.id] || { reasoning: '', output: '' });
     // 子段(roleplay.凛)继承父段图标
     const stageIcon = computed(() => STAGE_ICON[props.id]
