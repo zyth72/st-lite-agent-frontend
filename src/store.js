@@ -23,7 +23,8 @@ export const stageText = reactive({});        // stageId -> {reasoning, output}
 export const stageView = reactive({});        // stageId -> {md, mode, reasonOpen, outOpen, collapsed}
 
 export function visibleStageIds() {
-  return Object.keys(statuses).filter((id) => stages.value.some((s) => s.id === id));
+  // 按服务端 stageMeta(即流水线执行顺序)排序,而非落盘文件的遍历顺序
+  return stages.value.filter((s) => statuses[s.id]).map((s) => s.id);
 }
 
 const POLL_MS = 1500;

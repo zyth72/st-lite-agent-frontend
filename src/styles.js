@@ -11,6 +11,13 @@
  * (!important 压过 ST 全局主题),否则会以浏览器默认样式渲染。
  */
 export function css() {
+  if (!document.getElementById('lite-agent-md-style')) {
+    const link = document.createElement('link');
+    link.id = 'lite-agent-md-style';
+    link.rel = 'stylesheet';
+    link.href = new URL('./lib/github-markdown-dark.min.css', import.meta.url).href;
+    document.head.appendChild(link);
+  }
   if (document.getElementById('lite-agent-style')) return;
   const s = document.createElement('style');
   s.id = 'lite-agent-style';
@@ -277,6 +284,43 @@ export function css() {
 .la-pre::-webkit-scrollbar { width: 6px; }
 .la-pre::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 3px; }
 .la-pre blockquote { margin: 0; padding: 2px 0 2px 10px; border-left: 3px solid rgba(168, 200, 255, 0.3); color: var(--md-on-surface-variant); }
+
+/* ===== markdown 主题适配(github-markdown-css dark,vendor 在 lib/)=====
+ * 主题自身 scoped 在 .markdown-body;这里用 #lite-agent-panel 前缀压过它的
+ * 默认字号/背景/大间距,融进 M3 面板(透明底、紧凑行距、主题强调色)。 */
+#lite-agent-panel pre.markdown-body {
+  background: transparent;
+  margin: 0; padding: 0;
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--md-on-surface-variant);
+  white-space: normal;
+  word-break: break-word;
+}
+#lite-agent-panel .markdown-body p { margin: 0 0 6px; }
+#lite-agent-panel .markdown-body p:last-child { margin-bottom: 0; }
+#lite-agent-panel .markdown-body ul, #lite-agent-panel .markdown-body ol { margin: 2px 0 8px; padding-left: 20px; }
+#lite-agent-panel .markdown-body li { margin: 2px 0; }
+#lite-agent-panel .markdown-body li > p { margin: 0; }
+#lite-agent-panel .markdown-body li::marker { color: var(--md-outline); }
+#lite-agent-panel .markdown-body h1, #lite-agent-panel .markdown-body h2, #lite-agent-panel .markdown-body h3,
+#lite-agent-panel .markdown-body h4, #lite-agent-panel .markdown-body h5, #lite-agent-panel .markdown-body h6 {
+  margin: 8px 0 4px; padding: 0; border-bottom: none;
+  font-size: 13px; color: var(--md-primary);
+}
+#lite-agent-panel .markdown-body strong { color: var(--md-on-surface); }
+#lite-agent-panel .markdown-body a { color: var(--md-primary); }
+#lite-agent-panel .markdown-body hr { margin: 8px 0; background: var(--md-outline-variant); height: 1px; }
+#lite-agent-panel .markdown-body blockquote {
+  color: var(--md-on-surface-variant);
+  border-left: 3px solid rgba(168, 200, 255, 0.35);
+}
+#lite-agent-panel .markdown-body table { font-size: 12px; }
+#lite-agent-panel .la-out.la-prose pre.markdown-body {
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif;
+  font-size: 15.5px; line-height: 1.95; color: var(--md-on-surface);
+}
 
 /* 写作正文:小说排版(衬线 + 大行距) */
 .la-out.la-prose .la-pre { font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif; font-size: 15.5px; line-height: 1.95; color: var(--md-on-surface); }

@@ -70,7 +70,7 @@ const StageCard = defineComponent({
         <span>思维链</span>
         <span v-if="reasonLen" class="la-sum-meta">{{ reasonLen }}</span>
       </summary>
-      <div class="la-reason-body"><pre class="la-pre" :id="'la-reason-'+stage.id" v-html="reasonHtml"></pre></div>
+      <div class="la-reason-body"><pre class="la-pre markdown-body" :id="'la-reason-'+stage.id" v-html="reasonHtml"></pre></div>
     </details>
     <details class="la-out" :id="'la-out-'+stage.id" :class="{prose: stage.output==='stream'}" :open="sv.outOpen" v-if="text.output">
       <summary @click.prevent="sv.outOpen=!sv.outOpen">
@@ -84,7 +84,7 @@ const StageCard = defineComponent({
           <LaButton v-if="isJson" class="la-md-toggle" :text="sv.mode==='json' ? 'MD' : 'JSON'" @click="toggleMd(stage.id)"/>
           <LaButton class="la-copy" text="复制" @click="copy('output')"/>
         </div>
-        <pre class="la-pre" :id="'la-out-'+stage.id" v-html="outHtml"></pre>
+        <pre class="la-pre" :id="'la-out-'+stage.id" :class="{'markdown-body': !(isJson && sv.mode==='json')}" v-html="outHtml"></pre>
       </div>
     </details>
   </template>
