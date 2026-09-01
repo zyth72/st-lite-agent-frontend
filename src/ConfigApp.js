@@ -161,9 +161,12 @@ export default defineComponent({
 
     async function saveUpstreams() {
       try {
-        const list = providers.value.filter((p) => p.name && p.baseurl);
-        const keys = providers.value.filter((p) => p.name && p.key).map((p) => ({ name: p.name, key: p.key }));
-        await jsonFetch(S.base.value + '/agent/config', { upstreams: list, keys });
+        const list = providers.value.filter((p) => p.name && p.baseurl).map((p) => {
+          const u = { name: p.name, baseurl: p.baseurl, models: p.models };
+          if (p.key) u.apiKey = p.key; // 填了才带;留空 = 保持 config 已有密钥
+          return u;
+        });
+        await jsonFetch(S.base.value + '/agent/config', { upstreams: list });
         tip.value = '上游与密钥已保存并热生效';
         tipKind.value = 'ok';
         await load();
