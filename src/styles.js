@@ -4,9 +4,10 @@
  * 大圆角卡片(12dp)、pill 按钮、filled 输入框;primary 采用蓝紫色调,
  * 观感接近 Miuix/MIUI 的圆润风格。
  *
- * 球/面板用 position:absolute 而不是 fixed:ST 在 ≤1000px 视口把 body 设为
- * position:fixed,叠加 html 上的 -webkit-transform/-webkit-perspective,html 会
- * 成为 fixed 后代的包含块且高度为 0,right/bottom 定位会被推到视口外。
+ * 球/面板/配置界面用 position:absolute 而不是 fixed:ST 的 html 恒带
+ * -webkit-transform/-webkit-perspective,会成为 fixed 后代的包含块;≤1000px
+ * 视口下 body 又被设为 position:fixed 脱离文档流,html 高度塌缩为 0,
+ * fixed 元素(inset:0 亦然)会被压成 0 高或推到视口外。
  * 原生控件(input/button/checkbox/details/滚动条)全部用本文件规则覆盖
  * (!important 压过 ST 全局主题),否则会以浏览器默认样式渲染。
  */
@@ -444,7 +445,7 @@ export function css() {
   --md-error: #f2b8b5;
   --md-ok: #7bdb9a;
   --md-state-hover: rgba(230, 225, 229, 0.08);
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 2147483646;
   display: none;
