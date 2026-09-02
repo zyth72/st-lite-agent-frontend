@@ -89,6 +89,7 @@ export default defineComponent({
   components: { LaInput, LaSelect, LaToggleItem, LaButton, StageCards, UpstreamCards },
   setup() {
     const section = ref('stages');
+    const navOpen = ref(false);
     const tip = ref('');
     const tipKind = ref('');
     const loaded = ref(false);
@@ -204,29 +205,33 @@ export default defineComponent({
     }
 
     function saveBase() { S.setBase(baseInput.value); tip.value = '服务地址已更新'; tipKind.value = 'ok'; }
+    // 移动端抽屉导航:选中即收起
+    function pickSection(id) { section.value = id; navOpen.value = false; }
     function onBaseInput(v) { baseInput.value = v; }
 
     return {
-      SECTIONS, section, tip, tipKind, stages, providers, intrude, baseInput, enabled,
+      SECTIONS, section, navOpen, pickSection, tip, tipKind, stages, providers, intrude, baseInput, enabled,
       modelOptions, load, saveStages, saveUpstreams, saveIntrude, addProvider, removeProvider,
       loadModels, saveBase, onBaseInput,
       configOpen: S.configOpen, closeConfig: S.closeConfig, connected: S.connected,
     };
   },
   watch: {
-    configOpen(open) { if (open) { this.tip = ''; this.load(); } },
+    configOpen(open) { if (open) { this.tip = ''; this.load(); } else { this.navOpen = false; } },
   },
   template: `
 <div id="lite-agent-config" :class="{open: configOpen}">
   <div class="lcfg-shell">
     <div class="lcfg-head">
-      <span class="lcfg-brand">⚡ st-lite-agent 控制台</span>
+      <button class="lcfg-burger" type="button" aria-label="菜单" @click="navOpen=!navOpen">☰</button>
+      <span class="lcfg-brand">st-lite-agent 控制台</span>
       <span class="lcfg-status" :class="{ok: connected}"></span>
       <LaButton class="lcfg-close" text="✕ 关闭" @click="closeConfig"/>
     </div>
     <div class="lcfg-body">
-      <div class="lcfg-nav">
-        <div v-for="s in SECTIONS" :key="s.id" class="lcfg-nav-item" :class="{active: section===s.id}" @click="section=s.id">
+      <div class="lcfg-backdrop" :class="{open: navOpen}" @click="navOpen=false"></div>
+      <div class="lcfg-nav" :class="{open: navOpen}">
+        <div v-for="s in SECTIONS" :key="s.id" class="lcfg-nav-item" :class="{active: section===s.id}" @click="pickSection(s.id)">
           <span class="lcfg-nav-icon">{{ s.icon }}</span><span>{{ s.label }}</span>
         </div>
       </div>

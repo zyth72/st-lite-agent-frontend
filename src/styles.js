@@ -485,13 +485,15 @@ export function css() {
 #lite-agent-config .lcfg-nav-item {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 14px; border-radius: 12px;
+  border-left: 3px solid transparent;
   font-size: 13.5px; color: var(--md-on-surface-variant);
   cursor: pointer; user-select: none;
   transition: background .18s ease, color .18s ease;
 }
 #lite-agent-config .lcfg-nav-item:hover { background: var(--md-state-hover); color: var(--md-on-surface); }
 #lite-agent-config .lcfg-nav-item.active {
-  background: var(--md-primary-container); color: var(--md-on-primary-container); font-weight: 600;
+  background: rgba(168, 200, 255, 0.12); color: var(--md-primary); font-weight: 600;
+  border-left-color: var(--md-primary);
 }
 #lite-agent-config .lcfg-nav-icon { width: 20px; text-align: center; }
 #lite-agent-config .lcfg-content { flex: 1; overflow-y: auto; padding: 20px 26px 30px; }
@@ -578,10 +580,53 @@ export function css() {
   border: 1px solid var(--md-outline-variant) !important;
 }
 #lite-agent-config button.lcfg-close:hover { color: var(--md-on-surface) !important; background: var(--md-state-hover) !important; }
+/* 汉堡按钮(仅移动端)与抽屉遮罩 */
+#lite-agent-config .lcfg-burger {
+  display: none;
+  background: transparent !important; color: var(--md-on-surface-variant) !important;
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: 12px !important;
+  padding: 5px 12px !important;
+  font-size: 15px !important; line-height: 1.4 !important;
+}
+#lite-agent-config .lcfg-burger:hover { color: var(--md-on-surface) !important; background: var(--md-state-hover) !important; }
+#lite-agent-config .lcfg-backdrop {
+  display: none;
+  position: absolute; inset: 0; z-index: 2;
+  background: rgba(5, 4, 8, 0.55);
+}
 
 @media (max-width: 768px) {
   #lite-agent-config .lcfg-shell { inset: 0; border-radius: 0; }
-  #lite-agent-config .lcfg-nav { width: 150px; }
+  /* 头部:汉堡 + 标题 + 关闭 */
+  #lite-agent-config .lcfg-head { padding: 10px 12px; gap: 10px; }
+  #lite-agent-config .lcfg-burger { display: inline-block; }
+  #lite-agent-config .lcfg-brand { font-size: 14px; }
+  /* 导航改左侧抽屉:悬于内容之上,汉堡开合,点遮罩/选中即收 */
+  #lite-agent-config .lcfg-body { position: relative; }
+  #lite-agent-config .lcfg-nav {
+    position: absolute; top: 0; bottom: 0; left: 0; z-index: 3;
+    width: 264px; max-width: 78vw;
+    background: #17151b;
+    transform: translateX(-105%);
+    transition: transform .22s ease;
+    padding: 16px 12px;
+  }
+  #lite-agent-config .lcfg-nav.open { transform: translateX(0); box-shadow: 14px 0 44px rgba(0, 0, 0, 0.5); }
+  #lite-agent-config .lcfg-backdrop.open { display: block; }
+  #lite-agent-config .lcfg-nav-item { padding: 12px 14px; border-radius: 10px; }
+  /* 内容占满整行,表单纵向堆叠(参考 Anima Memory System 移动端) */
+  #lite-agent-config .lcfg-content { padding: 14px 16px 26px; }
+  #lite-agent-config .lcfg-row { flex-direction: column; align-items: stretch; gap: 7px; padding: 10px 0; }
+  #lite-agent-config .lcfg-label { flex: none; }
+  #lite-agent-config .lcfg-input, #lite-agent-config .lcfg-num-input, #lite-agent-config .lcfg-chip-input { width: 100% !important; }
+  #lite-agent-config .lcfg-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  #lite-agent-config .lcfg-num { flex-direction: column; align-items: stretch; gap: 5px; }
+  #lite-agent-config .lcfg-num > span { font-size: 11.5px; }
+  #lite-agent-config .lcfg-card { padding: 12px 14px 14px; }
+  #lite-agent-config .lcfg-card-head { flex-wrap: wrap; row-gap: 6px; }
+  #lite-agent-config .lcfg-actions { flex-wrap: wrap; }
+  #lite-agent-config .lcfg-actions button { flex: 1 1 auto; }
 }
 `;
   document.head.appendChild(s);
