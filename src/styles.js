@@ -640,6 +640,8 @@ export function css() {
   /* 内容占满整行,表单纵向堆叠(参考 Anima Memory System 移动端) */
   #lite-agent-config .lcfg-content { padding: 14px 16px 26px; }
   #lite-agent-config .lcfg-row { flex-direction: column; align-items: stretch; gap: 7px; padding: 10px 0; }
+  #lite-agent-config .lcfg-row.top { align-items: stretch; } /* 压过桌面 .row.top 的 flex-start,否则 params 框缩成内容宽 */
+  #lite-agent-config .lcfg-json-wrap { width: 100%; }
   #lite-agent-config .lcfg-label { flex: none; }
   #lite-agent-config .lcfg-input, #lite-agent-config .lcfg-num-input, #lite-agent-config .lcfg-chip-input { width: 100% !important; }
   #lite-agent-config .lcfg-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
