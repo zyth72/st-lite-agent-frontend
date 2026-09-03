@@ -2,14 +2,13 @@
  * 响应式状态 + 轮询。Vue 组件只读状态/调 action,不直接碰网络细节。
  *
  * 数据获取用轮询(默认 1.5s)而非 EventSource:服务重启/断连后轮询天然自愈,
- * 不需要刷新页面。数据源全部来自落盘文件,与后端解耦:
- *   GET /agent/requests                     → 最新请求 reqId + 段元数据
- *   GET /agent/steps/:reqId/:file?offset=N  → 增量续读 reasoning/output 落盘文件
+ * 不需要刷新页面。数据源全部来自落盘文件,与后端解耦;网络细节统一在 api.js。
  */
 import { ref, reactive } from './lib/vue.esm-browser.prod.js';
 import { useLocalStorage } from './hooks.js';
+import { base, getRequests, getStepTail, stopPipeline, renderMd } from './api.js';
 
-export const base = useLocalStorage('st-lite-agent-base', 'http://127.0.0.1:6789');
+export { base }; // 兼容既有导入:api.js 是唯一定义处
 export const ballPos = useLocalStorage('st-lite-agent-ball-pos', { right: 18, bottom: 18 });
 export const panelPos = useLocalStorage('st-lite-agent-panel-pos', { right: 18, bottom: 76 });
 
@@ -63,9 +62,7 @@ async function pollOnce() {
   if (pollBusy) return;
   pollBusy = true;
   try {
-    const res = await fetch(base.value + '/agent/requests');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const j = await res.json();
+    const j = await getRequests();
     connected.value = true;
 
     const latest = (j.requests || [])[0];
@@ -87,10 +84,9 @@ async function pollOnce() {
       if (!metas.some((s) => s.id === stageId || stageId.startsWith(s.id + '.'))) continue;
       const kind = f.endsWith('.reasoning.txt') ? 'reasoning' : 'output';
       const key = latest.id + '/' + f;
-      const r2 = await fetch(base.value + '/agent/steps/' + encodeURIComponent(latest.id) + '/'
-        + encodeURIComponent(f) + '?offset=' + (offsets[key] || 0));
-      if (!r2.ok) continue;
-      const d = await r2.json();
+      let d;
+      try { d = await getStepTail(latest.id, f, offsets[key] || 0); }
+      catch (e) { continue; } // 单文件读失败只跳过该文件,不影响其余段轮询
       if (!d || !d.exists) continue;
       offsets[key] = d.offset || offsets[key] || 0;
       if (!d.text) continue;
@@ -131,20 +127,17 @@ export function setBase(v) { base.value = v || 'http://127.0.0.1:6789'; connect(
 
 /** 面板"停止":中止当前正在进行的 agent 请求。 */
 export function stopCurrent() {
-  fetch(base.value + '/agent/stop', { method: 'POST' }).catch(() => {});
+  stopPipeline().catch(() => {});
 }
 
-/** json 段:正文 原始JSON ↔ 渲染MD(懒加载后端 /agent/render-md)。 */
+/** json 段:正文 原始JSON ↔ 渲染MD(懒加载后端渲染)。 */
 export async function toggleMd(id) {
   const sv = stageView[id] || (stageView[id] = { md: null, mode: 'json' });
   const content = (stageText[id] && stageText[id].output) || '';
   if (sv.mode === 'json') {
     if (sv.md == null) {
       try {
-        const r = await fetch(base.value + '/agent/render-md', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }),
-        });
-        const j = await r.json();
+        const j = await renderMd(content);
         sv.md = (j && j.md) || '';
       } catch (e) { sv.md = ''; }
     }

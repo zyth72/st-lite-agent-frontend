@@ -518,6 +518,17 @@ export function css() {
 #lite-agent-config .lcfg-nums { display: flex; gap: 18px; flex-wrap: wrap; }
 #lite-agent-config .lcfg-num { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--md-outline); }
 #lite-agent-config .lcfg-num-input { width: 120px !important; }
+#lite-agent-config .lcfg-row.top { align-items: flex-start; }
+#lite-agent-config .lcfg-json-wrap { flex: 1; min-width: 0; }
+#lite-agent-config textarea.lcfg-json {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 110px;
+  background: var(--md-surface-highest); color: var(--md-on-surface);
+  border: 1px solid rgba(147, 143, 153, 0.25); border-radius: 10px; padding: 10px 12px;
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; outline: none;
+}
+#lite-agent-config textarea.lcfg-json:focus { border-color: var(--md-primary, #a8c7fa); }
+#lite-agent-config textarea.lcfg-json.err { border-color: var(--md-error); }
+#lite-agent-config .lcfg-json-err { font-size: 11.5px; color: var(--md-error); margin-top: 4px; }
 #lite-agent-config .lcfg-actions { display: flex; gap: 10px; margin-top: 14px; }
 #lite-agent-config .lcfg-hint { font-size: 11.5px; color: var(--md-outline); }
 #lite-agent-config .lcfg-tip { margin-top: 14px; font-size: 12.5px; border-radius: 10px; padding: 9px 14px; }

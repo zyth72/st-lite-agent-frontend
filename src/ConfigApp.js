@@ -1,10 +1,11 @@
 /**
  * 全屏配置界面(扩展菜单入口 → 独立窗口)。
  * 左侧导航 + 右侧内容:模型配置 / 上游与密钥 / 乱入检定 / 服务连接。
- * 数据源:GET/POST /agent/config(保存即热生效,无需重启服务)。
+ * 数据源:GET/POST /agent/config(保存即热生效,无需重启服务),接口统一走 api.js。
  */
 import { defineComponent, ref, reactive, computed } from './lib/vue.esm-browser.prod.js';
 import * as S from './store.js';
+import { getConfig, saveConfig, loadUpstreamModels } from './api.js';
 import LaInput from './components/LaInput.js';
 import LaSelect from './components/LaSelect.js';
 import LaToggleItem from './components/LaToggleItem.js';
@@ -17,21 +18,42 @@ const SECTIONS = [
   { id: 'connection', icon: '🌐', label: '服务连接', hint: 'agent 服务地址与连接状态' },
 ];
 
-function jsonFetch(url, body) {
-  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .then(async (r) => {
-      if (!r.ok) {
-        let msg = 'HTTP ' + r.status;
-        try { const j = await r.json(); if (j && j.error) msg = j.error.message || msg; } catch (e) {}
-        throw new Error(msg);
-      }
-      return r.json();
-    });
-}
-
 const StageCards = defineComponent({
   props: { stages: Array, modelOptions: Array },
-  setup(props) { return {}; },
+  setup(props) {
+    // 实时校验:合法 JSON 对象返回 '',否则返回错误文案(空文本视为未设置)
+    function jsonErr(st) {
+      const t = (st.paramsJson || '').trim();
+      if (!t) return '';
+      let v;
+      try { v = JSON.parse(t); } catch (e) { return 'JSON 语法错误:' + String(e.message).slice(0, 90); }
+      if (typeof v !== 'object' || v === null || Array.isArray(v)) return 'params 必须是 JSON 对象 { … }';
+      return '';
+    }
+    // 双向同步:JSON 编辑(合法时)→ 控件;避免保存时控件旧值覆盖用户手改的 JSON
+    function syncFromJson(st) {
+      if (jsonErr(st)) return;
+      const p = JSON.parse(st.paramsJson || '{}');
+      st.think = !!(p.thinking && p.thinking.type === 'enabled');
+      st.stream = !!p.stream;
+      st.max = p.max_tokens != null ? String(p.max_tokens) : '';
+      st.timeout = p.timeout_s != null ? String(p.timeout_s) : '';
+    }
+    // 控件变动 → 写回 JSON 文本
+    function syncToJson(st) {
+      let p;
+      try { p = JSON.parse(st.paramsJson || '{}') || {}; } catch (e) { return; }
+      if (typeof p !== 'object' || p === null || Array.isArray(p)) return;
+      p.stream = !!st.stream;
+      p.thinking = (p.thinking && typeof p.thinking === 'object')
+        ? { ...p.thinking, type: st.think ? 'enabled' : 'disabled' }
+        : { type: st.think ? 'enabled' : 'disabled' };
+      if (st.max !== '') p.max_tokens = Number(st.max); else delete p.max_tokens;
+      if (st.timeout !== '') p.timeout_s = Number(st.timeout); else delete p.timeout_s;
+      st.paramsJson = JSON.stringify(p, null, 2);
+    }
+    return { jsonErr, syncFromJson, syncToJson };
+  },
   template: `
   <div class="lcfg-cards">
     <div v-for="st in stages" :key="st.id" class="lcfg-card">
@@ -41,14 +63,20 @@ const StageCards = defineComponent({
       </div>
       <div class="lcfg-row"><span class="lcfg-label">参数</span>
         <div class="lcfg-toggles">
-          <LaToggleItem v-model="st.think" label="thinking"/>
-          <LaToggleItem v-model="st.stream" label="stream"/>
+          <LaToggleItem v-model="st.think" label="thinking" @update:modelValue="syncToJson(st)"/>
+          <LaToggleItem v-model="st.stream" label="stream" @update:modelValue="syncToJson(st)"/>
         </div>
       </div>
       <div class="lcfg-row"><span class="lcfg-label">限制</span>
         <div class="lcfg-nums">
-          <label class="lcfg-num"><span>max_tokens</span><LaInput type="number" class="lcfg-num-input" v-model="st.max"/></label>
-          <label class="lcfg-num"><span>timeout_s</span><LaInput type="number" class="lcfg-num-input" v-model="st.timeout"/></label>
+          <label class="lcfg-num"><span>max_tokens</span><LaInput type="number" class="lcfg-num-input" v-model="st.max" @update:modelValue="syncToJson(st)"/></label>
+          <label class="lcfg-num"><span>timeout_s</span><LaInput type="number" class="lcfg-num-input" v-model="st.timeout" @update:modelValue="syncToJson(st)"/></label>
+        </div>
+      </div>
+      <div class="lcfg-row top"><span class="lcfg-label">params</span>
+        <div class="lcfg-json-wrap">
+          <textarea class="lcfg-json" :class="{err: jsonErr(st)}" rows="6" spellcheck="false" v-model="st.paramsJson" @input="syncFromJson(st)" placeholder='{"temperature": 0.3}'></textarea>
+          <div v-if="jsonErr(st)" class="lcfg-json-err">{{ jsonErr(st) }}</div>
         </div>
       </div>
     </div>
@@ -112,14 +140,18 @@ export default defineComponent({
         const ki = keys.find((k) => k.name === p.name);
         return { name: p.name, baseurl: p.baseurl, models: (p.models || []).slice(), keyHint: ki ? ki.hint : '', key: '', newModel: '' };
       });
-      stages.value = (d.stages || []).filter((s) => s.type === 'llm').map((st) => ({
-        id: st.id,
-        model: st.model || '',
-        think: st.thinking === 'enabled',
-        stream: !!st.stream,
-        max: st.max_tokens != null ? String(st.max_tokens) : '',
-        timeout: st.timeout_s != null ? String(st.timeout_s) : '',
-      }));
+      stages.value = (d.stages || []).filter((s) => s.type === 'llm').map((st) => {
+        const p = (st.params && typeof st.params === 'object') ? st.params : {};
+        return {
+          id: st.id,
+          model: st.model || '',
+          think: st.thinking === 'enabled',
+          stream: !!st.stream,
+          max: st.max_tokens != null ? String(st.max_tokens) : '',
+          timeout: p.timeout_s != null ? String(p.timeout_s) : '',
+          paramsJson: JSON.stringify(p, null, 2),
+        };
+      });
       const ri = (d.builtins && d.builtins.roll_intrude) || {};
       intrude.threshold = Number.isInteger(ri.threshold) ? ri.threshold : 90;
       intrude.count = Number.isInteger(ri.count) ? ri.count : 3;
@@ -128,9 +160,7 @@ export default defineComponent({
 
     async function load() {
       try {
-        const r = await fetch(S.base.value + '/agent/config');
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        toEditable(await r.json());
+        toEditable(await getConfig());
         loaded.value = true;
         tip.value = '';
       } catch (e) {
@@ -144,17 +174,32 @@ export default defineComponent({
       if (!S.configOpen.value) loaded.value = false;
     }
 
+    // params 键写删:空值 = 删除该键(未设置)
+    function setNum(p, k, v) { if (v !== '' && v != null && !Number.isNaN(Number(v))) p[k] = Number(v); else delete p[k]; }
+
     async function saveStages() {
+      const payload = [];
+      for (const st of stages.value) {
+        const t = (st.paramsJson || '').trim();
+        let p;
+        try { p = t ? JSON.parse(t) : {}; }
+        catch (e) { tip.value = '保存失败:' + st.id + ' 段 params 不是合法 JSON'; tipKind.value = 'err'; return; }
+        if (typeof p !== 'object' || p === null || Array.isArray(p)) {
+          tip.value = '保存失败:' + st.id + ' 段 params 必须是 JSON 对象'; tipKind.value = 'err'; return;
+        }
+        // 服务端语义:提交 params 即整体替换,同请求的顶层 thinking/stream/max_tokens 被忽略——
+        // 卡片控件(thinking/stream/max_tokens/timeout_s)为准写回 params 后整体提交。
+        p.stream = !!st.stream;
+        p.thinking = (p.thinking && typeof p.thinking === 'object')
+          ? { ...p.thinking, type: st.think ? 'enabled' : 'disabled' }
+          : { type: st.think ? 'enabled' : 'disabled' };
+        setNum(p, 'max_tokens', st.max);
+        setNum(p, 'timeout_s', st.timeout);
+        payload.push({ id: st.id, model: st.model, params: p });
+      }
       try {
-        await jsonFetch(S.base.value + '/agent/config', {
-          stages: stages.value.map((st) => ({
-            id: st.id, model: st.model,
-            thinking: st.think ? 'enabled' : 'disabled',
-            stream: !!st.stream,
-            max_tokens: st.max !== '' ? Number(st.max) : null,
-            timeout_s: st.timeout !== '' ? Number(st.timeout) : null,
-          })),
-        });
+        await saveConfig({ stages: payload });
+        await load(); // 重开拉取,textarea 归一化为服务端最新内容(load 会清 tip,故提示放在其后)
         tip.value = '模型配置已保存并热生效';
         tipKind.value = 'ok';
       } catch (e) { tip.value = '保存失败: ' + e.message; tipKind.value = 'err'; }
@@ -167,7 +212,7 @@ export default defineComponent({
           if (p.key) u.apiKey = p.key; // 填了才带;留空 = 保持 config 已有密钥
           return u;
         });
-        await jsonFetch(S.base.value + '/agent/config', { upstreams: list });
+        await saveConfig({ upstreams: list });
         tip.value = '上游与密钥已保存并热生效';
         tipKind.value = 'ok';
         await load();
@@ -181,11 +226,7 @@ export default defineComponent({
       if (!p.name || !p.baseurl) { tip.value = '请先填写该上游的名称与 Base URL'; tipKind.value = 'err'; return; }
       if (!p.key && !p.keyHint) { tip.value = '请先填入该上游的 API Key 再点获取模型'; tipKind.value = 'err'; return; }
       try {
-        const r = await fetch(S.base.value + '/agent/config/load-models', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: p.name, baseurl: p.baseurl, key: p.key }),
-        });
-        const j = await r.json();
+        const j = await loadUpstreamModels({ name: p.name, baseurl: p.baseurl, key: p.key });
         if (j.unsupported) { p.models = []; tip.value = '该上游不支持自动获取,请手动添加模型'; tipKind.value = 'err'; return; }
         p.models = j.models || [];
         await saveUpstreams(); // 直接写 config.json 并热生效,不再依赖手动保存
@@ -196,7 +237,7 @@ export default defineComponent({
 
     async function saveIntrude() {
       try {
-        await jsonFetch(S.base.value + '/agent/config', {
+        await saveConfig({
           builtins: { roll_intrude: { threshold: Number(intrude.threshold), count: Number(intrude.count) } },
         });
         tip.value = '乱入检定已保存并热生效';
@@ -242,6 +283,7 @@ export default defineComponent({
         <template v-if="section==='stages'">
           <StageCards :stages="stages" :model-options="modelOptions"/>
           <div class="lcfg-actions"><LaButton text="💾 保存模型配置" @click="saveStages"/></div>
+          <div class="lcfg-hint">params 整体替换,直接编辑 JSON;JSON ↔ 控件(thinking/stream/max_tokens/timeout_s)双向同步;输入留空 = 删除该键。</div>
         </template>
 
         <template v-if="section==='upstreams'">
