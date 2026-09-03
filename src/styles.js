@@ -521,14 +521,25 @@ export function css() {
 #lite-agent-config .lcfg-row.top { align-items: flex-start; }
 #lite-agent-config .lcfg-json-wrap { flex: 1; min-width: 0; }
 #lite-agent-config textarea.lcfg-json {
-  width: 100%; box-sizing: border-box; resize: vertical; min-height: 110px;
-  background: var(--md-surface-highest); color: var(--md-on-surface);
-  border: 1px solid rgba(147, 143, 153, 0.25); border-radius: 10px; padding: 10px 12px;
-  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; outline: none;
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 92px;
+  background: var(--md-surface-highest) !important;
+  border: 1px solid transparent !important;
+  color: var(--md-on-surface) !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  outline: none !important; box-shadow: none !important; tab-size: 2;
+  transition: border-color .15s, box-shadow .15s;
 }
-#lite-agent-config textarea.lcfg-json:focus { border-color: var(--md-primary, #a8c7fa); }
-#lite-agent-config textarea.lcfg-json.err { border-color: var(--md-error); }
-#lite-agent-config .lcfg-json-err { font-size: 11.5px; color: var(--md-error); margin-top: 4px; }
+#lite-agent-config textarea.lcfg-json:focus {
+  border-color: var(--md-primary) !important;
+  box-shadow: 0 0 0 1px var(--md-primary) !important;
+}
+#lite-agent-config textarea.lcfg-json.err { border-color: var(--md-error) !important; box-shadow: 0 0 0 1px var(--md-error) !important; }
+#lite-agent-config textarea.lcfg-json::-webkit-scrollbar { width: 8px; }
+#lite-agent-config textarea.lcfg-json::-webkit-scrollbar-thumb { background: rgba(147, 143, 153, 0.35); border-radius: 8px; }
+#lite-agent-config textarea.lcfg-json::-webkit-scrollbar-track { background: transparent; }
+#lite-agent-config .lcfg-json-err { font-size: 11.5px; color: var(--md-error); margin-top: 5px; }
 #lite-agent-config .lcfg-actions { display: flex; gap: 10px; margin-top: 14px; }
 #lite-agent-config .lcfg-hint { font-size: 11.5px; color: var(--md-outline); }
 #lite-agent-config .lcfg-tip { margin-top: 14px; font-size: 12.5px; border-radius: 10px; padding: 9px 14px; }

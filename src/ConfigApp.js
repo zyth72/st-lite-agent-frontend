@@ -39,6 +39,8 @@ const StageCards = defineComponent({
       st.max = p.max_tokens != null ? String(p.max_tokens) : '';
       st.timeout = p.timeout_s != null ? String(p.timeout_s) : '';
     }
+    // 行数随内容自适应(5–22 行),整段 JSON 一般无需滚动
+    const jsonRows = (st) => Math.min(Math.max((st.paramsJson || '').split('\n').length + 1, 5), 22);
     // 控件变动 → 写回 JSON 文本
     function syncToJson(st) {
       let p;
@@ -52,7 +54,7 @@ const StageCards = defineComponent({
       if (st.timeout !== '') p.timeout_s = Number(st.timeout); else delete p.timeout_s;
       st.paramsJson = JSON.stringify(p, null, 2);
     }
-    return { jsonErr, syncFromJson, syncToJson };
+    return { jsonErr, syncFromJson, syncToJson, jsonRows };
   },
   template: `
   <div class="lcfg-cards">
@@ -75,7 +77,7 @@ const StageCards = defineComponent({
       </div>
       <div class="lcfg-row top"><span class="lcfg-label">params</span>
         <div class="lcfg-json-wrap">
-          <textarea class="lcfg-json" :class="{err: jsonErr(st)}" rows="6" spellcheck="false" v-model="st.paramsJson" @input="syncFromJson(st)" placeholder='{"temperature": 0.3}'></textarea>
+          <textarea class="lcfg-json" :class="{err: jsonErr(st)}" :rows="jsonRows(st)" spellcheck="false" v-model="st.paramsJson" @input="syncFromJson(st)" placeholder='{"temperature": 0.3}'></textarea>
           <div v-if="jsonErr(st)" class="lcfg-json-err">{{ jsonErr(st) }}</div>
         </div>
       </div>
