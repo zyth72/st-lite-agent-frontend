@@ -50,7 +50,15 @@ ln -sfn /path/to/st-lite-agent-frontend <SillyTavern>/data/<用户名>/extension
 
 ## 接口约定
 
-服务端为 `st-lite-agent-server`,OpenAPI 文档由服务自托管:`GET http://<host>:6789/docs/openapi.json`。前端只用「面板与前端」分组 + 少量系统接口:
+服务端为 `st-lite-agent-server`,OpenAPI 文档由服务自托管:
+
+```bash
+# 通用形式:文档与接口同源
+curl http://<server.host>:<server.port>/docs/openapi.json
+
+# 本机当前用法(10.7.0.1 需经代理可达):
+proxychains -q curl 10.7.0.1:6789/docs/openapi.json
+```
 
 | 调用点 | 端点 |
 |---|---|
